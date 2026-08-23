@@ -9,8 +9,22 @@ momentum/
 │   ├── .dockerignore
 │   ├── package.json
 │   └── src/
-│       ├── api/
+│       ├── app.ts
+│       ├── server.ts
+│       ├── modules/
+│       │   ├── index.ts
+│       │   └── auth/
+│       │       ├── index.ts
+│       │       ├── login/
+│       │       ├── logout/
+│       │       └── reset-password/
+│       ├── middleware/
+│       ├── config/
+│       ├── db/
+│       ├── integrations/
+│       ├── queues/
 │       └── worker/
+│           └── processors/
 ├── frontend/
 │   ├── Dockerfile
 │   ├── .dockerignore
@@ -38,3 +52,21 @@ Cada aplicación mantiene su propio `Dockerfile` y `.dockerignore`. Dokploy desp
 3. `backend-worker`, construido desde `backend/` y ejecutado con el entrypoint del worker.
 
 Los dos servicios del backend pueden utilizar la misma imagen y el mismo conjunto de dependencias. La diferencia se define mediante el comando de inicio, no mediante una segunda API o un tercer proyecto.
+
+## Organización del backend
+
+El backend se organiza por módulos y endpoints, siguiendo la composición de rutas de Hono con `app.route()`. Un módulo principal puede montar módulos de dominio como `auth`, y cada dominio puede contener sus endpoints:
+
+```text
+modules/
+├── index.ts
+└── auth/
+    ├── index.ts
+    └── login/
+        ├── index.ts
+        ├── schema.ts
+        ├── service.ts
+        └── types.ts
+```
+
+Los handlers HTTP permanecen junto a sus rutas. La validación se realiza con Zod, la lógica de negocio vive en funciones independientes y los tipos se derivan de los schemas cuando sea posible. No se utilizan controladores MVC ni clases propias por defecto.

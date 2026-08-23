@@ -6,7 +6,7 @@ El proyecto está construido como un producto pequeño, pero con una arquitectur
 
 ## Documentación
 
-La documentación técnica y de producto pública se organiza en [`docs/`](docs/). La arquitectura actual está descrita en [`docs/architecture.md`](docs/architecture.md).
+La documentación técnica y de producto pública se organiza en [`docs/`](docs/). La arquitectura actual está descrita en [`docs/architecture.md`](docs/architecture.md), con detalles del [`backend`](docs/backend.md) y del [`frontend`](docs/frontend.md).
 
 Las áreas principales del proyecto son:
 
