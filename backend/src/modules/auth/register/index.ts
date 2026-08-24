@@ -7,13 +7,13 @@ import { registerUser } from "./service.js";
 const registerRouter = new Hono();
 
 registerRouter.post("/", validateJson(registerSchema), async (c) => {
-  const result = await registerUser(c.req.valid("json"));
+  const user = await registerUser(c.req.valid("json"));
 
-  if (!result.ok) {
+  if (!user) {
     throw createApiError(409, "EMAIL_ALREADY_REGISTERED", "Email already registered");
   }
 
-  return c.json({ user: result.user }, 201);
+  return c.json({ user }, 201);
 });
 
 export default registerRouter;

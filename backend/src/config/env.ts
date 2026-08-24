@@ -6,7 +6,6 @@ const envSchema = z.object({
   HOST: z.string().default("0.0.0.0"),
   CORS_ORIGIN: z.string().default("http://localhost:5173"),
   DATABASE_URL: z.string().min(1).default("file:./data/momentum.db"),
-  REDIS_URL: z.string().optional(),
   JWT_SECRET: z.string().min(32),
 });
 

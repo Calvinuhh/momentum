@@ -9,13 +9,13 @@ import { authenticateUser, createAccessToken } from "./service.js";
 const loginRouter = new Hono();
 
 loginRouter.post("/", validateJson(loginSchema), async (c) => {
-  const result = await authenticateUser(c.req.valid("json"));
+  const user = await authenticateUser(c.req.valid("json"));
 
-  if (!result.ok) {
+  if (!user) {
     throw createApiError(401, "INVALID_CREDENTIALS", "Invalid credentials");
   }
 
-  const token = await createAccessToken(result.user.id);
+  const token = await createAccessToken(user.id);
 
   setCookie(c, "access_token", token, {
     httpOnly: true,
@@ -25,7 +25,7 @@ loginRouter.post("/", validateJson(loginSchema), async (c) => {
     secure: env.NODE_ENV === "production",
   });
 
-  return c.json({ user: result.user });
+  return c.json({ user });
 });
 
 export default loginRouter;

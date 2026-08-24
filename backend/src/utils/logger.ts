@@ -1,7 +1,7 @@
 import { appendFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 
-type Level = "debug" | "info" | "warn" | "error";
+type Level = "info" | "warn" | "error";
 
 // ponytail: append without locking or size rotation; add pino/winston if throughput exceeds 1k req/s or centralized aggregation is needed
 const LOG_DIR = path.resolve(process.cwd(), "logs");
@@ -15,29 +15,36 @@ function fileForToday(): string {
   return path.join(LOG_DIR, `${d}.log`);
 }
 
-function format(level: Level, message: string, meta?: Record<string, unknown>): string {
-  const ts = new Date().toISOString();
-  const base = `[${ts}] ${level.toUpperCase()} ${message}`;
+function format(level: Level, message: string, timestamp: string, meta?: Record<string, unknown>): string {
+  const base = `[${timestamp}] ${level.toUpperCase()} ${message}`;
   if (meta && Object.keys(meta).length > 0) {
     return `${base} ${JSON.stringify(meta)}`;
   }
   return base;
 }
 
-async function write(level: Level, message: string, meta?: Record<string, unknown>) {
-  const line = format(level, message, meta) + "\n";
+async function write(
+  level: Level,
+  message: string,
+  meta?: Record<string, unknown>,
+  fileDetails?: string,
+) {
+  const line = format(level, message, new Date().toISOString(), meta);
   // Always log to the console.
-  if (level === "error") console.error(line.trim());
-  else if (level === "warn") console.warn(line.trim());
-  else console.log(line.trim());
+  if (level === "error") console.error(line);
+  else if (level === "warn") console.warn(line);
+  else console.log(line);
 
   // Date-based file, fire-and-forget; it does not block the request.
-  ensureDir().then(() => appendFile(fileForToday(), line).catch(() => {})).catch(() => {});
+  const fileEntry = `${line}${fileDetails ? `\n${fileDetails}` : ""}\n\n`;
+  ensureDir().then(() => appendFile(fileForToday(), fileEntry).catch(() => {})).catch(() => {});
 }
 
 export const logger = {
-  debug: (msg: string, meta?: Record<string, unknown>) => write("debug", msg, meta),
-  info: (msg: string, meta?: Record<string, unknown>) => write("info", msg, meta),
-  warn: (msg: string, meta?: Record<string, unknown>) => write("warn", msg, meta),
-  error: (msg: string, meta?: Record<string, unknown>) => write("error", msg, meta),
+  info: (msg: string, meta?: Record<string, unknown>, fileDetails?: string) =>
+    write("info", msg, meta, fileDetails),
+  warn: (msg: string, meta?: Record<string, unknown>, fileDetails?: string) =>
+    write("warn", msg, meta, fileDetails),
+  error: (msg: string, meta?: Record<string, unknown>, fileDetails?: string) =>
+    write("error", msg, meta, fileDetails),
 };

@@ -14,10 +14,7 @@ const allowedOrigins = env.CORS_ORIGIN.split(",").map((o) => o.trim());
 app.use(
   "*",
   cors({
-    origin: (origin) => {
-      if (!origin) return null;
-      return allowedOrigins.includes(origin) ? origin : null;
-    },
+    origin: allowedOrigins,
     credentials: true,
   }),
 );

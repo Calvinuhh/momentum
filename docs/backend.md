@@ -7,7 +7,6 @@
 - Hono para la API REST.
 - Zod para validación mediante `@hono/zod-validator`.
 - SQLite mediante `bun:sqlite` y Drizzle ORM (`DATABASE_URL=file:./data/momentum.db`, `PRAGMA journal_mode=WAL/foreign_keys/busy_timeout`).
-- BullMQ para procesamiento asíncrono (previsto, aún no instalado).
 - Logger nativo por fecha (`logs/YYYY-MM-DD.log`).
 
 ## Convención de idioma
@@ -16,35 +15,7 @@ El código fuente, identificadores, comentarios técnicos y respuestas de la API
 
 ## Organización
 
-El backend utiliza una organización modular por dominio y endpoint:
-
-```text
-src/
-├── app.ts
-├── server.ts
-├── modules/
-│   ├── index.ts
-│   └── auth/
-│       ├── index.ts
-│       ├── register/
-│       │   ├── index.ts
-│       │   ├── schema.ts
-│       │   └── service.ts
-│       ├── login/
-│       │   ├── index.ts
-│       │   ├── schema.ts
-│       │   └── service.ts
-│       ├── logout/
-│       │   └── index.ts
-│       └── reset-password/
-├── middleware/
-├── errors/
-├── config/
-├── db/
-├── integrations/
-├── queues/
-└── worker/
-```
+El backend utiliza una organización modular por dominio y endpoint. Actualmente implementa `register`, `login` y `logout` dentro del módulo `auth`.
 
 `modules/index.ts` monta los módulos principales con `app.route()`. Cada módulo puede montar sus endpoints relacionados y cada endpoint mantiene cerca su router, validación, lógica de negocio y tipos.
 
@@ -56,11 +27,17 @@ Los servicios contienen lógica de negocio independiente de Hono y no importan `
 
 Los handlers HTTP se mantienen pequeños y no se utilizan controladores MVC ni clases propias por defecto. `service.ts` contiene funciones independientes del contexto HTTP. `schema.ts` define los schemas Zod y `types.ts` exporta tipos derivados o tipos de dominio reutilizables.
 
-`app.ts` exporta la aplicación Hono para pruebas mediante `app.request()` con CORS multi-origen, `requestLogger` y `onError` (`ApiError`, `HTTPException` como fallback y `BAD_JSON`). `server.ts` inicia el servicio con `Bun.serve` (`HOST`/`PORT`). El worker BullMQ integrado está previsto pero aún no implementado.
+`app.ts` exporta la aplicación Hono para pruebas mediante `app.request()` con CORS multi-origen, `requestLogger` y `onError` (`ApiError`, `HTTPException` como fallback y `BAD_JSON`). `server.ts` inicia el servicio con `Bun.serve` (`HOST`/`PORT`).
 
 La validación JSON reutilizable se centraliza en `src/middleware/validation.ts` mediante `validateJson(schema)`. El middleware distingue `JSON_REQUIRED` (415), `EMPTY_JSON_BODY` (400), `BAD_JSON` (400) y `VALIDATION_ERROR` (400); las reglas de cada body permanecen en el `schema.ts` de su endpoint.
 
 Los errores HTTP propios usan la fábrica funcional `src/errors/api-error.ts`: `createApiError` crea un `Error` reutilizable sin clases, `isApiError` lo identifica y `apiErrorBody` mantiene el payload `{ error: { code, message, details? } }`. Los servicios permanecen independientes de Hono y devuelven resultados de dominio.
+
+## Observabilidad
+
+La consola muestra únicamente timestamp, nivel, método, ruta, status y duración. `logs/YYYY-MM-DD.log` añade request bodies para `POST`/`PUT`/`PATCH` y response bodies para `GET`/`POST`/`PUT`/`PATCH`/`DELETE` cuando son JSON. Passwords, tokens, cookies, secrets y claves se redactan; los emails se enmascaran. Cada preview se limita a 4 KiB y se omiten bodies no JSON, SSE, JSON malformado o capturas superiores a 64 KiB.
+
+La sanitización y el truncado tienen pruebas unitarias con `bun test`.
 
 ## Autenticación
 
@@ -70,15 +47,6 @@ La validación de `register` usa un contrato `VALIDATION_ERROR` con detalles por
 
 El registro exige una contraseña de 8-128 caracteres ASCII imprimibles con minúscula, mayúscula y carácter especial. Login mantiene mensajes genéricos para no revelar si un email existe o qué parte de las credenciales falló.
 
-## Procesos
-
-La API y el worker pertenecerán al mismo servicio y proceso (previsto):
-
-- API expone la API REST bajo `/api/v1` con `GET /api/v1/health`.
-- Worker consumirá jobs BullMQ (previsto, aún no implementado) y no necesitará endpoint ni despliegue independiente.
-
-Ambos compartirán el mismo archivo SQLite (`file:./data/momentum.db`) y el mismo build de Docker. Configuración validada con Zod en `src/config/env.ts` (`CORS_ORIGIN` lista por comas para DevTunnels).
-
 ## Datos
 
-SQLite es la fuente de verdad para los datos persistentes. Drizzle gestiona schema y migraciones versionadas. Redis se utiliza únicamente para colas y datos temporales apropiados.
+SQLite es la fuente de verdad para los datos persistentes. Drizzle gestiona schema y migraciones versionadas. Redis se incorporará únicamente para colas y datos temporales apropiados cuando exista su primer consumidor.
