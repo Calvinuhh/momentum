@@ -2,24 +2,24 @@
 
 ## Stack
 
-- React y TypeScript.
+- Vue y TypeScript.
 - Vite.
 - pnpm.
-- React Router.
-- TanStack Query.
-- Zustand.
-- React Hook Form y Zod.
+- Vue Router.
+- TanStack Vue Query.
+- Pinia.
+- Zod.
 - Tailwind CSS.
 
 ## Estado
 
 Momentum separa el estado según su naturaleza:
 
-- TanStack Query gestiona server state, caché, queries y mutations.
-- Zustand gestiona estado global del cliente, como workspace seleccionado, preferencias, navegación y UI global.
-- React local state gestiona estado efímero de componentes.
+- TanStack Vue Query gestiona server state, caché, queries y mutations.
+- Pinia gestiona estado global del cliente, como workspace seleccionado, preferencias, navegación y UI global.
+- Vue local state gestiona estado efímero de componentes.
 
-Zustand no sustituye a TanStack Query ni funciona como caché manual de respuestas de la API.
+Pinia no sustituye a TanStack Vue Query ni funciona como caché manual de respuestas de la API.
 
 ## Interfaz
 

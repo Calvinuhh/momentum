@@ -35,23 +35,17 @@ momentum/
 
 ## Aplicaciones y procesos
 
-- `frontend`: aplicación React gestionada con pnpm.
-- `backend-api`: API REST Hono ejecutada con Bun.
-- `backend-worker`: consumidor BullMQ ejecutado con Bun.
+- `frontend`: aplicación Vue gestionada con pnpm.
+- `backend`: API REST Hono y worker BullMQ ejecutados en el mismo proceso Bun.
 
-La API y el worker pertenecen al mismo package del backend y comparten código y dependencias. Se ejecutan como procesos independientes para que los jobs asíncronos no bloqueen ni afecten al ciclo de vida de la API.
-
-El worker no es una API adicional ni necesita un dominio público.
+La API y el worker pertenecen al mismo servicio y comparten el mismo archivo SQLite, dependencias y volumen persistente. Se inician de forma conjunta desde `server.ts` para simplificar despliegue y evitar compartir SQLite entre servicios independientes.
 
 ## Docker y Dokploy
 
-Cada aplicación mantiene su propio `Dockerfile` y `.dockerignore`. Dokploy despliega tres servicios:
+Cada aplicación mantiene su propio `Dockerfile` y `.dockerignore`. Dokploy despliega dos servicios:
 
 1. `frontend`, construido desde `frontend/`.
-2. `backend-api`, construido desde `backend/` y ejecutado con el entrypoint de la API.
-3. `backend-worker`, construido desde `backend/` y ejecutado con el entrypoint del worker.
-
-Los dos servicios del backend pueden utilizar la misma imagen y el mismo conjunto de dependencias. La diferencia se define mediante el comando de inicio, no mediante una segunda API o un tercer proyecto.
+2. `backend`, construido desde `backend/` y ejecutado como un único proceso que levanta API y worker.
 
 ## Organización del backend
 
@@ -70,3 +64,7 @@ modules/
 ```
 
 Los handlers HTTP permanecen junto a sus rutas. La validación se realiza con Zod, la lógica de negocio vive en funciones independientes y los tipos se derivan de los schemas cuando sea posible. No se utilizan controladores MVC ni clases propias por defecto.
+
+## Datos y despliegue
+
+Los datos persistentes se almacenan en SQLite mediante `bun:sqlite`. El archivo SQLite vive en un volumen persistente del servicio `backend`, accesible tanto para la API como para el worker al ejecutarse en el mismo proceso. Redis Cloud se utiliza para colas y jobs programados.
