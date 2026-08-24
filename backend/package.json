@@ -1,14 +1,22 @@
 {
   "name": "backend",
   "scripts": {
-    "start": "bun run dist/index.js",
-    "dev": "bun run --hot src/index.ts",
-    "build": "bun build src/index.ts --minify target bun --outdir dist"
+    "start": "bun run dist/server.js",
+    "dev": "bun run --hot src/server.ts",
+    "build": "bun build src/server.ts --minify --target bun --outdir dist",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push"
   },
   "dependencies": {
-    "hono": "^4.13.3"
+    "drizzle-orm": "^0.45.2",
+    "hono": "^4.13.3",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "^1.4.0",
+    "drizzle-kit": "^0.31.10",
+    "typescript": "^7.0.2"
   }
 }
