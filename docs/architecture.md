@@ -18,12 +18,12 @@ momentum/
 │       │       ├── login/
 │       │       ├── logout/
 │       │       └── reset-password/
-│       ├── middleware/
-│       ├── config/
-│       ├── db/
-│       ├── integrations/
-│       ├── queues/
-│       └── worker/
+│       ├── middleware/   # requestLogger + logger por fecha
+│       ├── config/       # env.ts Zod
+│       ├── db/           # bun:sqlite + drizzle
+│       ├── integrations/ # previsto
+│       ├── queues/       # previsto
+│       └── worker/       # previsto
 │           └── processors/
 ├── frontend/
 │   ├── Dockerfile

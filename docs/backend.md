@@ -5,9 +5,10 @@
 - Bun como runtime y gestor de dependencias.
 - TypeScript.
 - Hono para la API REST.
-- Zod y `@hono/zod-validator` para validación.
-- SQLite mediante `bun:sqlite` y Drizzle ORM.
-- BullMQ para procesamiento asíncrono.
+- Zod para validación (`@hono/zod-validator` previsto en fase auth).
+- SQLite mediante `bun:sqlite` y Drizzle ORM (`DATABASE_URL=file:./data/momentum.db`, `PRAGMA journal_mode=WAL/foreign_keys/busy_timeout`).
+- BullMQ para procesamiento asíncrono (previsto, aún no instalado).
+- Logger nativo por fecha (`logs/YYYY-MM-DD.log`).
 
 ## Organización
 
@@ -38,16 +39,16 @@ src/
 
 Los handlers HTTP se mantienen pequeños y no se utilizan controladores MVC ni clases propias por defecto. `service.ts` contiene funciones independientes del contexto HTTP. `schema.ts` define los schemas Zod y `types.ts` exporta tipos derivados o tipos de dominio reutilizables.
 
-`app.ts` exporta la aplicación Hono para pruebas mediante `app.request()`. `server.ts` inicia el servicio backend y arranca API y worker en el mismo proceso Bun.
+`app.ts` exporta la aplicación Hono para pruebas mediante `app.request()` con CORS multi-origen, `requestLogger` y `onError` (`HTTPException`/`BAD_JSON`). `server.ts` inicia el servicio con `Bun.serve` (`HOST`/`PORT`). El worker BullMQ integrado está previsto pero aún no implementado.
 
 ## Procesos
 
-La API y el worker pertenecen al mismo servicio y proceso:
+La API y el worker pertenecerán al mismo servicio y proceso (previsto):
 
-- API expone la API REST bajo `/api/v1`.
-- Worker consume jobs BullMQ y no necesita endpoint ni despliegue independiente en esta fase.
+- API expone la API REST bajo `/api/v1` con `GET /api/v1/health`.
+- Worker consumirá jobs BullMQ (previsto, aún no implementado) y no necesitará endpoint ni despliegue independiente.
 
-Ambos comparten el mismo archivo SQLite y el mismo build de Docker.
+Ambos compartirán el mismo archivo SQLite (`file:./data/momentum.db`) y el mismo build de Docker. Configuración validada con Zod en `src/config/env.ts` (`CORS_ORIGIN` lista por comas para DevTunnels).
 
 ## Datos
 
