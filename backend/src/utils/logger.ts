@@ -3,7 +3,7 @@ import path from "node:path";
 
 type Level = "debug" | "info" | "warn" | "error";
 
-// ponytail: append sin lock ni rotación por tamaño, add pino/winston si throughput >1k req/s o agregación centralizada
+// ponytail: append without locking or size rotation; add pino/winston if throughput exceeds 1k req/s or centralized aggregation is needed
 const LOG_DIR = path.resolve(process.cwd(), "logs");
 
 async function ensureDir() {
@@ -26,12 +26,12 @@ function format(level: Level, message: string, meta?: Record<string, unknown>): 
 
 async function write(level: Level, message: string, meta?: Record<string, unknown>) {
   const line = format(level, message, meta) + "\n";
-  // consola siempre
+  // Always log to the console.
   if (level === "error") console.error(line.trim());
   else if (level === "warn") console.warn(line.trim());
   else console.log(line.trim());
 
-  // archivo por fecha – fire-and-forget, no bloquea request
+  // Date-based file, fire-and-forget; it does not block the request.
   ensureDir().then(() => appendFile(fileForToday(), line).catch(() => {})).catch(() => {});
 }
 

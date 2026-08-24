@@ -1,9 +1,10 @@
 node_modules
 .env
+resources/
 dist/
 logs/
 data/
-*.db
-resources/
-AGENTS.md
 .vscode/
+*.db
+*.log
+AGENTS.md

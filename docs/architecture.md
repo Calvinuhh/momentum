@@ -15,10 +15,12 @@ momentum/
 │       │   ├── index.ts
 │       │   └── auth/
 │       │       ├── index.ts
+│       │       ├── register/
 │       │       ├── login/
 │       │       ├── logout/
 │       │       └── reset-password/
-│       ├── middleware/   # requestLogger + logger por fecha
+│       ├── middleware/   # validation + requestLogger
+│       ├── errors/       # ApiError y payload común de errores
 │       ├── config/       # env.ts Zod
 │       ├── db/           # bun:sqlite + drizzle
 │       ├── integrations/ # previsto
@@ -56,14 +58,21 @@ modules/
 ├── index.ts
 └── auth/
     ├── index.ts
-    └── login/
-        ├── index.ts
-        ├── schema.ts
-        ├── service.ts
-        └── types.ts
+    ├── register/
+    │   ├── index.ts
+    │   ├── schema.ts
+    │   ├── service.ts
+    │   └── types.ts
+    ├── login/
+    │   ├── index.ts
+    │   ├── schema.ts
+    │   ├── service.ts
+    │   └── types.ts
+    └── logout/
+        └── index.ts
 ```
 
-Los handlers HTTP permanecen junto a sus rutas. La validación se realiza con Zod, la lógica de negocio vive en funciones independientes y los tipos se derivan de los schemas cuando sea posible. No se utilizan controladores MVC ni clases propias por defecto.
+Los handlers HTTP permanecen junto a sus rutas. La validación se realiza con Zod y `validateJson`, la lógica de negocio vive en funciones independientes y los tipos se derivan de los schemas cuando sea posible. Los servicios no dependen de Hono; los endpoints traducen resultados de dominio a errores `ApiError`. No se utilizan controladores MVC ni clases propias por defecto.
 
 ## Datos y despliegue
 

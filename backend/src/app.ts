@@ -5,6 +5,7 @@ import { env } from "./config/env.js";
 import { router } from "./modules/index.js";
 import { requestLogger } from "./middleware/logger.js";
 import { logger } from "./utils/logger.js";
+import { apiErrorBody, isApiError } from "./errors/api-error.js";
 
 export const app = new Hono();
 
@@ -28,11 +29,14 @@ app.route("/api/v1", router);
 app.notFound((c) => c.json({ error: { code: "NOT_FOUND", message: "Not found" } }, 404));
 
 app.onError((err, c) => {
+  if (isApiError(err)) {
+    return c.json(apiErrorBody(err), err.status);
+  }
   if (err instanceof HTTPException) {
-    return c.json({ error: { code: "HTTP_EXCEPTION", message: err.message } }, err.status);
+    return c.json(apiErrorBody({ code: "HTTP_ERROR", message: err.message }), err.status);
   }
   if (err instanceof SyntaxError) {
-    return c.json({ error: { code: "BAD_JSON", message: "JSON mal formado" } }, 400);
+    return c.json(apiErrorBody({ code: "BAD_JSON", message: "Malformed JSON request body" }), 400);
   }
   logger.error(err.message, { stack: err.stack });
   const message = env.NODE_ENV === "production" ? "Internal Server Error" : err.message;
