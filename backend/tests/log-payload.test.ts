@@ -17,7 +17,8 @@ describe("log payload previews", () => {
       password: "[REDACTED]",
       nested: { accessToken: "[REDACTED]", ownerEmail: "o***@example.com" },
     });
-    expect(preview).toContain("\n  \"email\"");
+    expect(preview).not.toContain("\n");
+    expect(preview).toContain("\"email\":\"c***@example.com\"");
   });
 
   test("omits malformed JSON instead of leaking its raw content", () => {

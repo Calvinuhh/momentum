@@ -35,7 +35,7 @@ Los errores HTTP propios usan la fábrica funcional `src/errors/api-error.ts`: `
 
 ## Observabilidad
 
-La consola muestra únicamente timestamp, nivel, método, ruta, status y duración. `logs/YYYY-MM-DD.log` añade request bodies para `POST`/`PUT`/`PATCH` y response bodies para `GET`/`POST`/`PUT`/`PATCH`/`DELETE` cuando son JSON. Passwords, tokens, cookies, secrets y claves se redactan; los emails se enmascaran. Cada preview se limita a 4 KiB y se omiten bodies no JSON, SSE, JSON malformado o capturas superiores a 64 KiB.
+La consola muestra únicamente timestamp, nivel, método, ruta, status y duración. `logs/YYYY-MM-DD.log` añade request bodies para `POST`/`PUT`/`PATCH` y response bodies para `GET`/`POST`/`PUT`/`PATCH`/`DELETE` cuando son JSON compacto en una sola línea (`Request body: {...}` / `Response body: {...}` + blank line entre requests). Passwords, tokens, cookies, secrets y claves se redactan; los emails se enmascaran. Cada preview se limita a 4 KiB y se omiten bodies no JSON, SSE, JSON malformado o capturas superiores a 64 KiB.
 
 La sanitización y el truncado tienen pruebas unitarias con `bun test`.
 

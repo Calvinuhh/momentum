@@ -14,21 +14,21 @@ async function requestDetails(c: Context): Promise<string> {
   if (REQUEST_BODY_METHODS.has(c.req.method)) {
     try {
       const request = await cloneRawRequest(c.req);
-      sections.push(`Request body:\n${await captureBodyPreview(request)}`);
+      sections.push(`Request body: ${await captureBodyPreview(request)}`);
     } catch {
-      sections.push("Request body:\n[unavailable]");
+      sections.push("Request body: [unavailable]");
     }
   }
 
   if (RESPONSE_BODY_METHODS.has(c.req.method)) {
     try {
-      sections.push(`Response body:\n${await captureBodyPreview(c.res.clone())}`);
+      sections.push(`Response body: ${await captureBodyPreview(c.res.clone())}`);
     } catch {
-      sections.push("Response body:\n[unavailable]");
+      sections.push("Response body: [unavailable]");
     }
   }
 
-  return sections.join("\n\n");
+  return sections.join("\n");
 }
 
 export const requestLogger = createMiddleware(async (c, next) => {

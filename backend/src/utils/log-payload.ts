@@ -36,7 +36,7 @@ function truncate(value: string): string {
   const bytes = encoder.encode(value);
   if (bytes.length <= PREVIEW_LIMIT_BYTES) return value;
 
-  return `${new TextDecoder().decode(bytes.slice(0, PREVIEW_LIMIT_BYTES))}\n... [truncated at 4 KiB]`;
+  return `${new TextDecoder().decode(bytes.slice(0, PREVIEW_LIMIT_BYTES))} ... [truncated at 4 KiB]`;
 }
 
 export function formatBodyPreview(body: string, contentType: string | null): string {
@@ -46,7 +46,7 @@ export function formatBodyPreview(body: string, contentType: string | null): str
 
   if (type === "application/json" || type.endsWith("+json")) {
     try {
-      return truncate(JSON.stringify(sanitize(JSON.parse(body)), null, 2));
+      return truncate(JSON.stringify(sanitize(JSON.parse(body))));
     } catch {
       return "[omitted: malformed JSON cannot be safely sanitized]";
     }
