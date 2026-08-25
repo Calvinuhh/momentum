@@ -1,4 +1,17 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import { useQuery } from '@tanstack/vue-query'
+import { getMe } from '@/api/auth'
+import { useAuthStore } from '@/stores/auth'
+
+const auth = useAuthStore()
+
+const { isPending: isAuthPending } = useQuery({
+  queryKey: ['auth', 'me'],
+  queryFn: getMe,
+  staleTime: 5 * 60 * 1000,
+  retry: false,
+})
+</script>
 
 <template>
   <div>
@@ -12,18 +25,40 @@
         <p class="mt-4 max-w-xl text-neutral-400">
           Create workspaces, set goals, assign tasks and keep your team aligned — without bloat.
         </p>
-        <div class="mt-8 flex gap-3">
-          <RouterLink to="/register" class="rounded bg-brand-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-brand-700"
-            >Get started</RouterLink
-          >
-          <RouterLink to="/login" class="rounded border border-neutral-800 px-6 py-2.5 text-sm hover:bg-neutral-900"
-            >Log in</RouterLink
-          >
+        <div v-if="!isAuthPending" class="mt-8 flex gap-3">
+          <template v-if="auth.isAuthed">
+            <RouterLink
+              to="/workspaces"
+              class="rounded bg-brand-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-brand-700"
+            >
+              Open workspaces
+            </RouterLink>
+          </template>
+          <template v-else>
+            <RouterLink
+              to="/register"
+              class="rounded bg-brand-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-brand-700"
+            >
+              Get started
+            </RouterLink>
+            <RouterLink
+              to="/login"
+              class="rounded border border-neutral-800 px-6 py-2.5 text-sm hover:bg-neutral-900"
+            >
+              Log in
+            </RouterLink>
+          </template>
         </div>
         <ul class="mt-10 grid grid-cols-1 gap-3 text-sm text-neutral-400 sm:grid-cols-3">
-          <li class="rounded border border-neutral-800 bg-neutral-900/40 p-4">Workspaces as isolation boundary</li>
-          <li class="rounded border border-neutral-800 bg-neutral-900/40 p-4">Goals → Tasks → Subtasks</li>
-          <li class="rounded border border-neutral-800 bg-neutral-900/40 p-4">Roles OWNER / ADMIN / MEMBER</li>
+          <li class="rounded border border-neutral-800 bg-neutral-900/40 p-4">
+            Workspaces as isolation boundary
+          </li>
+          <li class="rounded border border-neutral-800 bg-neutral-900/40 p-4">
+            Goals → Tasks → Subtasks
+          </li>
+          <li class="rounded border border-neutral-800 bg-neutral-900/40 p-4">
+            Roles OWNER / ADMIN / MEMBER
+          </li>
         </ul>
       </div>
     </section>

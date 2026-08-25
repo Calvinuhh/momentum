@@ -1,5 +1,6 @@
 import { appendFile, mkdir } from "node:fs/promises";
 import path from "node:path";
+import { env } from "../config/env.js";
 
 type Level = "info" | "warn" | "error";
 
@@ -34,6 +35,8 @@ async function write(
   if (level === "error") console.error(line);
   else if (level === "warn") console.warn(line);
   else console.log(line);
+
+  if (!env.SHOW_LOGS) return;
 
   // Date-based file, fire-and-forget; it does not block the request.
   const fileEntry = `${line}${fileDetails ? `\n${fileDetails}` : ""}\n\n`;

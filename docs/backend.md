@@ -7,7 +7,7 @@
 - Hono para la API REST.
 - Zod para validación mediante `@hono/zod-validator`.
 - SQLite mediante `bun:sqlite` y Drizzle ORM (`DATABASE_URL=file:./data/momentum.db`, `PRAGMA journal_mode=WAL/foreign_keys/busy_timeout`).
-- Logger nativo por fecha (`logs/YYYY-MM-DD.log`).
+- Logger nativo por fecha, con persistencia opcional en `logs/YYYY-MM-DD.log` mediante `SHOW_LOGS`.
 
 ## Convención de idioma
 
@@ -35,7 +35,7 @@ Los errores HTTP propios usan la fábrica funcional `src/errors/api-error.ts`: `
 
 ## Observabilidad
 
-La consola muestra únicamente timestamp, nivel, método, ruta, status y duración. `logs/YYYY-MM-DD.log` añade request bodies para `POST`/`PUT`/`PATCH` y response bodies para `GET`/`POST`/`PUT`/`PATCH`/`DELETE` cuando son JSON compacto en una sola línea (`Request body: {...}` / `Response body: {...}` + blank line entre requests). Passwords, tokens, cookies, secrets y claves se redactan; los emails se enmascaran. Cada preview se limita a 4 KiB y se omiten bodies no JSON, SSE, JSON malformado o capturas superiores a 64 KiB.
+La consola muestra siempre timestamp, nivel, método, ruta, status y duración. `SHOW_LOGS=true` habilita además `logs/YYYY-MM-DD.log`, que añade request bodies para `POST`/`PUT`/`PATCH` y response bodies para `GET`/`POST`/`PUT`/`PATCH`/`DELETE` cuando son JSON compacto en una sola línea (`Request body: {...}` / `Response body: {...}` + blank line entre requests). Con `SHOW_LOGS=false` (valor por defecto) no se crean archivos. Passwords, tokens, cookies, secrets y claves se redactan; los emails se enmascaran. Cada preview se limita a 4 KiB y se omiten bodies no JSON, SSE, JSON malformado o capturas superiores a 64 KiB. La decisión de persistir archivos es independiente de `NODE_ENV`.
 
 La sanitización y el truncado tienen pruebas unitarias con `bun test`.
 
@@ -49,7 +49,7 @@ El registro exige una contraseña de 8-128 caracteres ASCII imprimibles con min�
 
 ## Workspaces
 
-`POST /api/v1/workspaces` (`requireAuth` + `validateJson` `name 3-50`, `description 0-1000 → null`) → `201 {workspace}` y crea `membership` `OWNER`. `GET /api/v1/workspaces` → lista filtrada por membresía y `deletedAt is null`. `GET /api/v1/workspaces/:id` → `200 {workspace+role}` o `404 WORKSPACE_NOT_FOUND`. `DELETE /api/v1/workspaces/:id` → hard delete permanente, solo para el `OWNER`, elimina primero invitaciones y memberships dentro de una transacción y devuelve `204`.
+`POST /api/v1/workspaces` (`requireAuth` + `validateJson` `name 3-50`, `description` omitida/`null` o string trim 5-1000 → `null` si no existe) → `201 {workspace}` y crea `membership` `OWNER`. Una descripción vacía, solo espacios o menor de cinco caracteres produce `400 VALIDATION_ERROR`. `GET /api/v1/workspaces` → lista filtrada por membresía y `deletedAt is null`. `GET /api/v1/workspaces/:id` → `200 {workspace+role}` o `404 WORKSPACE_NOT_FOUND`. `DELETE /api/v1/workspaces/:id` → hard delete permanente, solo para el `OWNER`, elimina primero invitaciones y memberships dentro de una transacción y devuelve `204`.
 
 El hard delete es un endpoint backend-only y no tiene llamada, control ni flujo implementado en el frontend. Su carácter irreversible debe mantenerse explícito. El soft delete del MVP sigue pendiente y no puede reutilizar esta ruta sin una decisión posterior de contrato.
 

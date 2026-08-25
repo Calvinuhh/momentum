@@ -9,15 +9,15 @@
 
 Momentum separa el estado según su naturaleza:
 
-- TanStack Vue Query gestiona server state, caché, queries y mutations (`auth/me` desde el header y el guard, `workspaces` via `query` + `invalidateQueries`). La consulta de sesión usa `staleTime` de 5 minutos y no reintenta el `401` esperado.
-- Pinia gestiona estado global del cliente, como workspace seleccionado (`localStorage momentum:workspaceId`), `user` efímero y UI global.
+- TanStack Vue Query gestiona server state, caché, queries y mutations (`auth/me` desde el header y el guard, `workspaces` via `query` + `invalidateQueries`). La consulta de sesión usa `staleTime` de 5 minutos y no reintenta el `401` esperado; `AppHeader` sincroniza su resultado con Pinia para la reactividad visual.
+- Pinia gestiona estado global del cliente, como workspace seleccionado (`localStorage momentum:workspaceId`), `user` efímero y UI global. Header y landing renderizan la sesión desde `auth.isAuthed`, por lo que `auth.reset()` actualiza inmediatamente sus acciones después del logout.
 - Vue local state gestiona estado efímero de componentes (`useFormErrors`).
 
 Pinia no sustituye a TanStack Vue Query ni funciona como caché manual de respuestas de la API.
 
 ## Rutas y vistas
 
-- `/` landing Momentum (pública), `/register` y `/login` con validación `safeParse` + `z.flattenError` + `useFormErrors`, `/workspaces` y `/workspaces/:id` (`requiresAuth`, 4 estados loading/error/empty/success), `/:pathMatch(.*)*` 404. El header consulta `auth/me`: autenticado muestra `Workspaces` + `Log out`; anónimo muestra `Log in` + `Sign up`.
+- `/` landing Momentum (pública), `/register` y `/login` (`requiresGuest`) con validación `safeParse` + `z.flattenError` + `useFormErrors`, `/workspaces` y `/workspaces/:id` (`requiresAuth`, 4 estados loading/error/empty/success), `/:pathMatch(.*)*` 404. El header y el hero consultan `auth/me`: autenticado muestran `Workspaces`/`Open workspaces` + `Log out`; anónimo muestra `Log in` + `Sign up` y `Get started`. Las rutas guest redirigen a `/` si ya existe sesión.
 
 ## API
 

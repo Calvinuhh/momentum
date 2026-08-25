@@ -23,7 +23,7 @@ const { mutate, isPending } = useMutation({
 
 function onSubmit() {
   clear()
-  const parsed = createWorkspaceSchema.safeParse({ name: form.name, description: form.description })
+  const parsed = createWorkspaceSchema.safeParse({ name: form.name, description: form.description || undefined })
   if (!parsed.success) {
     applyZod(parsed.error)
     return
