@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useMutation, useQueryClient } from '@tanstack/vue-query'
 import { loginSchema } from '@/schemas/auth'
@@ -12,6 +12,7 @@ const route = useRoute()
 const qc = useQueryClient()
 const auth = useAuthStore()
 const form = reactive({ email: '', password: '' })
+const showPassword = ref(false)
 const { errors, serverError, clear, applyZod, applyApi } = useFormErrors()
 
 const { mutate, isPending } = useMutation({
@@ -42,7 +43,9 @@ function onSubmit() {
     <h1 class="text-2xl font-semibold">Welcome back</h1>
     <p class="mt-1 text-sm text-neutral-400">Log in to Momentum.</p>
 
-    <p v-if="serverError" class="mt-4 rounded bg-red-950/50 px-3 py-2 text-sm text-red-300">{{ serverError }}</p>
+    <p v-if="serverError" class="mt-4 rounded bg-red-950/50 px-3 py-2 text-sm text-red-300">
+      {{ serverError }}
+    </p>
 
     <form class="mt-6 space-y-4" @submit.prevent="onSubmit">
       <div>
@@ -58,13 +61,26 @@ function onSubmit() {
       </div>
       <div>
         <label class="text-sm text-neutral-300">Password</label>
-        <input
-          v-model="form.password"
-          type="password"
-          autocomplete="current-password"
-          class="mt-1 w-full rounded border bg-neutral-900 px-3 py-2 text-sm outline-none focus:border-brand-600"
-          :class="errors.password ? 'border-red-800' : 'border-neutral-800'"
-        />
+        <div class="relative">
+          <input
+            id="login-password"
+            v-model="form.password"
+            :type="showPassword ? 'text' : 'password'"
+            autocomplete="current-password"
+            class="mt-1 w-full rounded border bg-neutral-900 px-3 py-2 pr-16 text-sm outline-none focus:border-brand-600"
+            :class="errors.password ? 'border-red-800' : 'border-neutral-800'"
+          />
+          <button
+            type="button"
+            class="absolute right-2 top-1/2 -translate-y-1/2 rounded px-2 py-1 text-xs text-neutral-400 hover:text-white"
+            :aria-label="showPassword ? 'Hide password' : 'Show password'"
+            :aria-pressed="showPassword"
+            aria-controls="login-password"
+            @click="showPassword = !showPassword"
+          >
+            {{ showPassword ? 'Hide' : 'Show' }}
+          </button>
+        </div>
         <p v-if="errors.password" class="mt-1 text-xs text-red-400">{{ errors.password }}</p>
       </div>
       <button

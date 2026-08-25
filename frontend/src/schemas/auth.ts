@@ -1,17 +1,22 @@
 import { z } from 'zod'
 
-const emailSchema = z.string().trim().min(1, 'Email is required').pipe(z.email('Email must be valid'))
+const emailSchema = z
+  .string()
+  .trim()
+  .min(1, 'Email is required')
+  .pipe(z.email('Email must be valid'))
 
 export const registerSchema = z.object({
   email: emailSchema,
   password: z
     .string()
-    .min(1, 'Password is required')
-    .min(8, 'Password must be at least 8 characters long')
-    .max(128, 'Password must be at most 128 characters long')
-    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9\s])[\x20-\x7E]{8,128}$/, {
-      message: 'Password must contain lower, upper and special character (printable ASCII only)',
-    }),
+    .min(1, 'Please enter a password.')
+    .min(8, 'Password must be at least 8 characters.')
+    .max(128, 'Password must be 128 characters or fewer.')
+    .regex(/^[\x20-\x7E]*$/, 'Use standard keyboard characters only.')
+    .regex(/[a-z]/, 'Add at least one lowercase letter (a-z).')
+    .regex(/[A-Z]/, 'Add at least one uppercase letter (A-Z).')
+    .regex(/[^A-Za-z0-9\s]/, 'Add at least one symbol, such as !, @, or #.'),
 })
 
 export const loginSchema = z.object({

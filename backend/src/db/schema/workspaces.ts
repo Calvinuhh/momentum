@@ -1,3 +1,4 @@
+import { createId } from "@paralleldrive/cuid2";
 import { sql } from "drizzle-orm";
 import { check, index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { users } from "./users.js";
@@ -6,8 +7,8 @@ export const workspaces = sqliteTable(
   "workspaces",
   {
     id: text("id")
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
+    .primaryKey()
+      .$defaultFn(() => createId()),
     name: text("name").notNull(),
     description: text("description"),
     ownerId: text("owner_id")

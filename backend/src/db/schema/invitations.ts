@@ -1,3 +1,4 @@
+import { createId } from "@paralleldrive/cuid2";
 import { sql } from "drizzle-orm";
 import { check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { users } from "./users.js";
@@ -9,8 +10,8 @@ export const invitations = sqliteTable(
   "invitations",
   {
     id: text("id")
-      .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
+    .primaryKey()
+      .$defaultFn(() => createId()),
     workspaceId: text("workspace_id")
       .notNull()
       .references(() => workspaces.id),

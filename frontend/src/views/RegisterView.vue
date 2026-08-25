@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMutation } from '@tanstack/vue-query'
 import { registerSchema } from '@/schemas/auth'
@@ -8,6 +8,7 @@ import { useFormErrors } from '@/composables/useFormErrors'
 
 const router = useRouter()
 const form = reactive({ email: '', password: '' })
+const showPassword = ref(false)
 const { errors, serverError, clear, applyZod, applyApi } = useFormErrors()
 
 const { mutate, isPending } = useMutation({
@@ -34,7 +35,9 @@ function onSubmit() {
     <h1 class="text-2xl font-semibold">Create your account</h1>
     <p class="mt-1 text-sm text-neutral-400">Join Momentum — start shipping.</p>
 
-    <p v-if="serverError" class="mt-4 rounded bg-red-950/50 px-3 py-2 text-sm text-red-300">{{ serverError }}</p>
+    <p v-if="serverError" class="mt-4 rounded bg-red-950/50 px-3 py-2 text-sm text-red-300">
+      {{ serverError }}
+    </p>
 
     <form class="mt-6 space-y-4" @submit.prevent="onSubmit">
       <div>
@@ -50,15 +53,30 @@ function onSubmit() {
       </div>
       <div>
         <label class="text-sm text-neutral-300">Password</label>
-        <input
-          v-model="form.password"
-          type="password"
-          autocomplete="new-password"
-          class="mt-1 w-full rounded border bg-neutral-900 px-3 py-2 text-sm outline-none focus:border-brand-600"
-          :class="errors.password ? 'border-red-800' : 'border-neutral-800'"
-        />
+        <div class="relative">
+          <input
+            id="register-password"
+            v-model="form.password"
+            :type="showPassword ? 'text' : 'password'"
+            autocomplete="new-password"
+            class="mt-1 w-full rounded border bg-neutral-900 px-3 py-2 pr-16 text-sm outline-none focus:border-brand-600"
+            :class="errors.password ? 'border-red-800' : 'border-neutral-800'"
+          />
+          <button
+            type="button"
+            class="absolute right-2 top-1/2 -translate-y-1/2 rounded px-2 py-1 text-xs text-neutral-400 hover:text-white"
+            :aria-label="showPassword ? 'Hide password' : 'Show password'"
+            :aria-pressed="showPassword"
+            aria-controls="register-password"
+            @click="showPassword = !showPassword"
+          >
+            {{ showPassword ? 'Hide' : 'Show' }}
+          </button>
+        </div>
         <p v-if="errors.password" class="mt-1 text-xs text-red-400">{{ errors.password }}</p>
-        <p class="mt-1 text-xs text-neutral-500">8-128 printable ASCII, lower + upper + special char.</p>
+        <p class="mt-1 text-xs text-neutral-500">
+          Use 8-128 characters, including an uppercase letter, a lowercase letter, and a symbol.
+        </p>
       </div>
       <button
         type="submit"

@@ -8,21 +8,21 @@ export const registerSchema = z.object({
     .toLowerCase()
     .pipe(z.email({ error: "Email must be valid" })),
   password: z
-    .string({ error: "Password is required" })
-    .min(1, { error: "Password is required", abort: true })
-    .min(8, { error: "Password must be at least 8 characters long" })
-    .max(128, { error: "Password must be at most 128 characters long" })
+    .string({ error: "Please enter a password." })
+    .min(1, { error: "Please enter a password.", abort: true })
+    .min(8, { error: "Password must be at least 8 characters." })
+    .max(128, { error: "Password must be 128 characters or fewer." })
     .regex(/^[\x20-\x7E]*$/, {
-      error: "Password must contain only printable ASCII characters",
+      error: "Use standard keyboard characters only.",
     })
     .regex(/[a-z]/, {
-      error: "Password must contain at least one lowercase letter",
+      error: "Add at least one lowercase letter (a-z).",
     })
     .regex(/[A-Z]/, {
-      error: "Password must contain at least one uppercase letter",
+      error: "Add at least one uppercase letter (A-Z).",
     })
     .regex(/[^A-Za-z0-9\s]/, {
-      error: "Password must contain at least one special character",
+      error: "Add at least one symbol, such as !, @, or #.",
     }),
 });
 
