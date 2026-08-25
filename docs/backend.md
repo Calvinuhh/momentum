@@ -49,7 +49,9 @@ El registro exige una contraseña de 8-128 caracteres ASCII imprimibles con min�
 
 ## Workspaces
 
-`POST /api/v1/workspaces` (`requireAuth` + `validateJson` `name 3-50`, `description 0-1000 → null`) → `201 {workspace}` y crea `membership` `OWNER`. `GET /api/v1/workspaces` → lista filtrada por membresía y `deletedAt is null`. `GET /api/v1/workspaces/:id` → `200 {workspace+role}` o `404 WORKSPACE_NOT_FOUND`.
+`POST /api/v1/workspaces` (`requireAuth` + `validateJson` `name 3-50`, `description 0-1000 → null`) → `201 {workspace}` y crea `membership` `OWNER`. `GET /api/v1/workspaces` → lista filtrada por membresía y `deletedAt is null`. `GET /api/v1/workspaces/:id` → `200 {workspace+role}` o `404 WORKSPACE_NOT_FOUND`. `DELETE /api/v1/workspaces/:id` → hard delete permanente, solo para el `OWNER`, elimina primero invitaciones y memberships dentro de una transacción y devuelve `204`.
+
+El hard delete es un endpoint backend-only y no tiene llamada, control ni flujo implementado en el frontend. Su carácter irreversible debe mantenerse explícito. El soft delete del MVP sigue pendiente y no puede reutilizar esta ruta sin una decisión posterior de contrato.
 
 ## Datos
 
