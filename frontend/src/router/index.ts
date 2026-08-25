@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { queryClient } from '@/lib/queryClient'
-import { apiFetch } from '@/api/client'
+import { getMe } from '@/api/auth'
 
 declare module 'vue-router' {
   interface RouteMeta {
@@ -24,9 +24,9 @@ const router = createRouter({
 router.beforeEach(async (to) => {
   if (!to.meta.requiresAuth) return
   try {
-    await queryClient.fetchQuery({
+    await queryClient.query({
       queryKey: ['auth', 'me'],
-      queryFn: () => apiFetch<{ user: { id: string; email: string } }>('/api/v1/auth/me').then((r) => r.user),
+      queryFn: getMe,
       staleTime: 5 * 60 * 1000,
       retry: false,
     })

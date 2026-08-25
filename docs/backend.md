@@ -15,7 +15,7 @@ El código fuente, identificadores, comentarios técnicos y respuestas de la API
 
 ## Organización
 
-El backend utiliza una organización modular por dominio y endpoint. Actualmente implementa `register`, `login` y `logout` dentro del módulo `auth`.
+El backend utiliza una organización modular por dominio y endpoint. Actualmente implementa `auth/register`, `auth/login`, `auth/logout`, `auth/me` y `workspaces` (`POST /`, `GET /`, `GET /:id` protegidos).
 
 `modules/index.ts` monta los módulos principales con `app.route()`. Cada módulo puede montar sus endpoints relacionados y cada endpoint mantiene cerca su router, validación, lógica de negocio y tipos.
 
@@ -27,7 +27,7 @@ Los servicios contienen lógica de negocio independiente de Hono y no importan `
 
 Los handlers HTTP se mantienen pequeños y no se utilizan controladores MVC ni clases propias por defecto. `service.ts` contiene funciones independientes del contexto HTTP. `schema.ts` define los schemas Zod y `types.ts` exporta tipos derivados o tipos de dominio reutilizables.
 
-`app.ts` exporta la aplicación Hono para pruebas mediante `app.request()` con CORS multi-origen, `requestLogger` y `onError` (`ApiError`, `HTTPException` como fallback y `BAD_JSON`). `server.ts` inicia el servicio con `Bun.serve` (`HOST`/`PORT`).
+`app.ts` exporta la aplicación Hono para pruebas mediante `app.request()` con CORS multi-origen, `requestLogger` y `onError` (`ApiError`, `HTTPException` como fallback y `BAD_JSON`). `server.ts` inicia el servicio con `Bun.serve` (`HOST`/`PORT`). `modules/index.ts` monta `auth` y `workspaces`.
 
 La validación JSON reutilizable se centraliza en `src/middleware/validation.ts` mediante `validateJson(schema)`. El middleware distingue `JSON_REQUIRED` (415), `EMPTY_JSON_BODY` (400), `BAD_JSON` (400) y `VALIDATION_ERROR` (400); las reglas de cada body permanecen en el `schema.ts` de su endpoint.
 
@@ -41,12 +41,16 @@ La sanitización y el truncado tienen pruebas unitarias con `bun test`.
 
 ## Autenticación
 
-Implementados `POST /api/v1/auth/register`, `POST /api/v1/auth/login` y `POST /api/v1/auth/logout`. El registro guarda el hash generado por `Bun.password` y devuelve únicamente el usuario público, sin emitir JWT. El login emite un JWT HS256 de siete días en la cookie `HttpOnly` `access_token`; logout elimina esa cookie. Los refresh tokens y la revocación server-side se implementarán posteriormente.
+Implementados `POST /api/v1/auth/register`, `POST /api/v1/auth/login`, `POST /api/v1/auth/logout` y `GET /api/v1/auth/me` (`requireAuth`). El registro guarda el hash generado por `Bun.password` y devuelve únicamente el usuario público, sin emitir JWT. El login emite un JWT HS256 de siete días en la cookie `HttpOnly` `access_token`; logout elimina esa cookie; `GET /me` retorna `200 {user}` o `401`. Los refresh tokens y la revocación server-side se implementarán posteriormente. Middleware `requireAuth` acepta cookie `access_token` o `Bearer` y verifica `HS256` con `JWT_SECRET`.
 
 La validación de `register` usa un contrato `VALIDATION_ERROR` con detalles por campo (`field` y `message`), sin exponer directamente la estructura interna de `ZodError`.
 
 El registro exige una contraseña de 8-128 caracteres ASCII imprimibles con minúscula, mayúscula y carácter especial. Login mantiene mensajes genéricos para no revelar si un email existe o qué parte de las credenciales falló.
 
+## Workspaces
+
+`POST /api/v1/workspaces` (`requireAuth` + `validateJson` `name 3-50`, `description 0-1000 → null`) → `201 {workspace}` y crea `membership` `OWNER`. `GET /api/v1/workspaces` → lista filtrada por membresía y `deletedAt is null`. `GET /api/v1/workspaces/:id` → `200 {workspace+role}` o `404 WORKSPACE_NOT_FOUND`.
+
 ## Datos
 
-SQLite es la fuente de verdad para los datos persistentes. Drizzle gestiona schema y migraciones versionadas. Redis se incorporará únicamente para colas y datos temporales apropiados cuando exista su primer consumidor.
+SQLite es la fuente de verdad. Tablas implementadas: `users`, `workspaces` (soft delete `deletedAt`, checks `name 3-50`, `description ≤1000`, indexes `ownerId/deletedAt`), `memberships` (PK compuesta, `role` check, indexes), `invitations` (tokenHash unique, expiración 7d, partial unique pendiente). Drizzle gestiona schema y migraciones versionadas. Redis se incorporará únicamente para colas y datos temporales apropiados cuando exista su primer consumidor.

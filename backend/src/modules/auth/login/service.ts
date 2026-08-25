@@ -18,10 +18,10 @@ export async function authenticateUser({ email, password }: LoginInput) {
   return { id: user.id, email: user.email };
 }
 
-export function createAccessToken(userId: string): Promise<string> {
-  const now = Math.floor(Date.now() / 1000);
+export async function createAccessToken(userId: string): Promise<string> {
+  const now = Math.floor(Date.now() / 1000)
 
-  return sign(
+  const token = await sign(
     {
       sub: userId,
       iat: now,
@@ -29,5 +29,9 @@ export function createAccessToken(userId: string): Promise<string> {
     },
     env.JWT_SECRET,
     "HS256",
-  );
+  )
+
+  env.NODE_ENV === "development" ? console.log(token) : null
+
+  return token
 }

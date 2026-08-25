@@ -16,6 +16,11 @@ export function login(data: { email: string; password: string }) {
   })
 }
 
+export async function getMe() {
+  const response = await apiFetch<{ user: User }>('/api/v1/auth/me')
+  return response.user
+}
+
 export function logout() {
   return apiFetch<void>('/api/v1/auth/logout', { method: 'POST' })
 }
