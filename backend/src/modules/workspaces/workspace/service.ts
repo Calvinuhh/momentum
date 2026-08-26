@@ -1,8 +1,8 @@
 import { and, eq, isNull } from "drizzle-orm";
-import { db } from "../../db/index.js";
-import { invitations } from "../../db/schema/invitations.js";
-import { memberships } from "../../db/schema/memberships.js";
-import { workspaces } from "../../db/schema/workspaces.js";
+import { db } from "../../../db/index.js";
+import { invitations } from "../../../db/schema/invitations.js";
+import { memberships } from "../../../db/schema/memberships.js";
+import { workspaces } from "../../../db/schema/workspaces.js";
 import type { CreateWorkspaceInput } from "./schema.js";
 
 export function createWorkspace(ownerId: string, input: CreateWorkspaceInput) {

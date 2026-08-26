@@ -16,11 +16,11 @@ El código fuente, identificadores, comentarios técnicos y respuestas de la API
 
 ## Organización
 
-El backend utiliza una organización modular por dominio y endpoint. Actualmente implementa `auth/register`, `auth/login`, `auth/logout`, `auth/me`, `auth/verify-email` y `workspaces` (`POST /`, `GET /`, `GET /:id` protegidos).
+El backend utiliza una organización modular por dominio y endpoint. Actualmente implementa auth, workspaces e invitaciones mediante `modules/invitations/{create,accept,claim}`.
 
 `modules/index.ts` monta los módulos principales con `app.route()`. Cada módulo puede montar sus endpoints relacionados y cada endpoint mantiene cerca su router, validación, lógica de negocio y tipos.
 
-El `index.ts` de la raíz de un módulo solo compone los routers de sus endpoints. Los archivos `schema.ts`, `service.ts` y `types.ts` pertenecen al directorio del endpoint y se crean únicamente cuando son necesarios.
+La raíz de cada módulo contiene únicamente `index.ts`, que compone sus routers. Cada endpoint usa, cuando son necesarios, `index.ts`, `schema.ts` y `service.ts`; los helpers reutilizables pertenecen a `src/utils/`.
 
 Los servicios contienen lógica de negocio independiente de Hono y no importan `HTTPException`. El endpoint traduce los resultados de dominio a respuestas HTTP.
 
@@ -28,7 +28,7 @@ Los servicios contienen lógica de negocio independiente de Hono y no importan `
 
 Los handlers HTTP se mantienen pequeños y no se utilizan controladores MVC ni clases propias por defecto. `service.ts` contiene funciones independientes del contexto HTTP. `schema.ts` define los schemas Zod y `types.ts` exporta tipos derivados o tipos de dominio reutilizables.
 
-`app.ts` exporta la aplicación Hono para pruebas mediante `app.request()` con CORS multi-origen, `requestLogger` y `onError` (`ApiError`, `HTTPException` como fallback y `BAD_JSON`). `server.ts` inicia el servicio con `Bun.serve` (`HOST`/`PORT`). `modules/index.ts` monta `auth` y `workspaces`.
+`app.ts` exporta la aplicación Hono para pruebas mediante `app.request()` con CORS multi-origen, `requestLogger` y `onError` (`ApiError`, `HTTPException` como fallback y `BAD_JSON`). `server.ts` inicia el servicio con `Bun.serve` (`HOST`/`PORT`). `modules/index.ts` monta `auth`, `invitations` y `workspaces`.
 
 La validación JSON reutilizable se centraliza en `src/middleware/validation.ts` mediante `validateJson(schema)`. El middleware distingue `JSON_REQUIRED` (415), `EMPTY_JSON_BODY` (400), `BAD_JSON` (400) y `VALIDATION_ERROR` (400); las reglas de cada body permanecen en el `schema.ts` de su endpoint.
 
@@ -53,6 +53,10 @@ El registro exige una contraseña de 8-128 caracteres ASCII imprimibles con min�
 `POST /api/v1/workspaces` (`requireAuth` + `validateJson` `name 3-50`, `description` omitida/`null` o string trim 5-1000 → `null` si no existe) → `201 {workspace}` y crea `membership` `OWNER`. Una descripción vacía, solo espacios o menor de cinco caracteres produce `400 VALIDATION_ERROR`. `GET /api/v1/workspaces` → lista filtrada por membresía y `deletedAt is null`. `GET /api/v1/workspaces/:id` → `200 {workspace+role}` o `404 WORKSPACE_NOT_FOUND`. `DELETE /api/v1/workspaces/:id` → hard delete permanente, solo para el `OWNER`, elimina primero invitaciones y memberships dentro de una transacción y devuelve `204`.
 
 El hard delete es un endpoint backend-only y no tiene llamada, control ni flujo implementado en el frontend. Su carácter irreversible debe mantenerse explícito. El soft delete del MVP sigue pendiente y no puede reutilizar esta ruta sin una decisión posterior de contrato.
+
+## Invitaciones
+
+`POST /api/v1/workspaces/:id/invitations` permite invitar como `ADMIN` o `MEMBER` a emails registrados o no registrados y encola un email con token URL-safe de 32 bytes válido durante 7 días. Solo se almacena SHA-256. `POST /api/v1/invitations/accept` crea la membership para el usuario autenticado cuyo email coincide. `POST /api/v1/invitations/claim` crea atómicamente usuario verificado, membership y aceptación para destinatarios sin cuenta, e inicia su sesión. No se crean usuarios provisionales al enviar invitaciones.
 
 ## Datos
 

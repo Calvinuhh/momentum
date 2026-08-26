@@ -2,7 +2,7 @@ import { db } from "../../../db/index.js";
 import { users } from "../../../db/schema/users.js";
 import { eq } from "drizzle-orm";
 import { enqueueVerificationEmail } from "../../../queue/email.js";
-import { createVerificationCode, hashVerificationCode } from "../verify-email/tokens.js";
+import { createVerificationCode, hashVerificationCode } from "../../../utils/verification-tokens.js";
 import type { RegisterInput } from "./schema.js";
 
 export async function registerUser({ email, password }: RegisterInput) {

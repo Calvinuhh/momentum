@@ -1,11 +1,7 @@
 import { eq } from "drizzle-orm";
-import { sign } from "hono/jwt";
 import { db } from "../../../db/index.js";
 import { users } from "../../../db/schema/users.js";
-import { env } from "../../../config/env.js";
 import type { LoginInput } from "./schema.js";
-
-const ACCESS_TOKEN_TTL_SECONDS = 60 * 60 * 24 * 7;
 
 export async function authenticateUser({ email, password }: LoginInput) {
   const user = db.select().from(users).where(eq(users.email, email)).get();
@@ -20,20 +16,4 @@ export async function authenticateUser({ email, password }: LoginInput) {
   }
 
   return { id: user.id, email: user.email };
-}
-
-export async function createAccessToken(userId: string): Promise<string> {
-  const now = Math.floor(Date.now() / 1000)
-
-  const token = await sign(
-    {
-      sub: userId,
-      iat: now,
-      exp: now + ACCESS_TOKEN_TTL_SECONDS,
-    },
-    env.JWT_SECRET,
-    "HS256",
-  )
-
-  return token
 }

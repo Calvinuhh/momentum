@@ -16,6 +16,7 @@ const router = createRouter({
     { path: '/register', component: () => import('@/views/RegisterView.vue'), meta: { requiresGuest: true } },
     { path: '/login', component: () => import('@/views/LoginView.vue'), meta: { requiresGuest: true } },
     { path: '/confirm-account', component: () => import('@/views/ConfirmAccountView.vue'), meta: { requiresGuest: true } },
+    { path: '/invitations/accept', component: () => import('@/views/AcceptInvitationView.vue') },
     { path: '/workspaces', component: () => import('@/views/WorkspacesView.vue'), meta: { requiresAuth: true } },
     { path: '/workspaces/:id', component: () => import('@/views/WorkspaceDetailView.vue'), meta: { requiresAuth: true } },
     { path: '/:pathMatch(.*)*', component: () => import('@/views/NotFoundView.vue') },

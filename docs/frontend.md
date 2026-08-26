@@ -3,7 +3,7 @@
 ## Stack
 
 - Vue 3.5 y TypeScript estricto + Vite + `@tailwindcss/vite` (`@import "tailwindcss"` + `@theme` brand `oklch`).
-- pnpm, Vue Router (6 rutas, guard `auth/me`), TanStack Vue Query (`QueryClient` 30s stale), Pinia (auth efímero + `selectedWorkspaceId` persistido), Zod (`z.flattenError`), alias `@`.
+- pnpm, Vue Router (8 rutas, guard `auth/me`), TanStack Vue Query (`QueryClient` 30s stale), Pinia (auth efímero + `selectedWorkspaceId` persistido), Zod (`z.flattenError`), alias `@`.
 
 ## Estado
 
@@ -17,11 +17,11 @@ Pinia no sustituye a TanStack Vue Query ni funciona como caché manual de respue
 
 ## Rutas y vistas
 
-- `/` landing Momentum (pública), `/register`, `/login` y `/confirm-account` (`requiresGuest`) con validación `safeParse` + `z.flattenError` + `useFormErrors`, `/workspaces` y `/workspaces/:id` (`requiresAuth`, 4 estados loading/error/empty/success), `/:pathMatch(.*)*` 404. El header y el hero consultan `auth/me`: autenticado muestran `Workspaces`/`Open workspaces` + `Log out`; anónimo muestra `Log in` + `Sign up` y `Get started`. Registro dirige a la confirmación de email y las rutas guest redirigen a `/` si ya existe sesión.
+- `/` landing, `/register`, `/login`, `/confirm-account`, `/invitations/accept`, `/workspaces`, `/workspaces/:id` y fallback 404. La ruta de invitación admite sesión existente o reclamación con password; conserva el token en `sessionStorage` y no lo incluye en el redirect de login.
 
 ## API
 
-- `fetch` wrapper `VITE_BACKEND_URL` + `credentials:include`, `ApiError` `{code,details}` y helper `fieldErrors`; `api/auth.ts` expone `verifyEmail` y `getMe`, `GET /auth/me` se usa tanto por el header como por el guard.
+- `fetch` wrapper `VITE_BACKEND_URL` + `credentials:include`, `ApiError` `{code,details}`; `api/invitations.ts` expone creación, aceptación y reclamación. `WorkspaceInviteDialog` está disponible para `OWNER/ADMIN` y la autorización efectiva permanece en backend.
 
 ## Interfaz
 

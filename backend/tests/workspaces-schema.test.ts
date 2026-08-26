@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkspaceSchema } from "../src/modules/workspaces/schema.js";
+import { createWorkspaceSchema } from "../src/modules/workspaces/workspace/schema.js";
 
 const baseWorkspace = { name: "Momentum" };
 

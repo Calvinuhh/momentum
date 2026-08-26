@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createVerificationCode, hashVerificationCode } from "../src/modules/auth/verify-email/tokens.js";
+import { createVerificationCode, hashVerificationCode } from "../src/utils/verification-tokens.js";
 
 describe("email verification tokens", () => {
   test("creates six-character alphanumeric codes", () => {

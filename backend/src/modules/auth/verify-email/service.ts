@@ -1,7 +1,7 @@
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { db } from "../../../db/index.js";
 import { users } from "../../../db/schema/users.js";
-import { hashVerificationCode } from "./tokens.js";
+import { hashVerificationCode } from "../../../utils/verification-tokens.js";
 import type { VerifyEmailInput } from "./schema.js";
 
 export async function verifyUserEmail({ email, code }: VerifyEmailInput) {
