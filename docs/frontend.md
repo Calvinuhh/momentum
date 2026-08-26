@@ -21,7 +21,7 @@ Pinia no sustituye a TanStack Vue Query ni funciona como caché manual de respue
 
 ## API
 
-- `fetch` wrapper `VITE_BACKEND_URL` + `credentials:include`, `ApiError` `{code,details}`; `api/invitations.ts` expone creación, aceptación y reclamación. `WorkspaceInviteDialog` está disponible para `OWNER/ADMIN` y la autorización efectiva permanece en backend.
+- `fetch` wrapper `VITE_BACKEND_URL` + `credentials:include`, `ApiError` `{code,details}` y refresh transparente mediante Web Locks: serializa transiciones de sesión entre pestañas, reintenta la petición tras `204` e impide que una operación anterior se repita con otra cuenta. `api/invitations.ts` expone creación, aceptación y reclamación. `WorkspaceInviteDialog` está disponible para `OWNER/ADMIN` y la autorización efectiva permanece en backend.
 
 ## Interfaz
 

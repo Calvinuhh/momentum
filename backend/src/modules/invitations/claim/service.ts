@@ -1,14 +1,23 @@
-import { eq } from "drizzle-orm";
+import { and, eq, gt, isNull } from "drizzle-orm";
 import { db } from "../../../db/index.js";
 import { invitations } from "../../../db/schema/invitations.js";
 import { memberships } from "../../../db/schema/memberships.js";
+import { refreshTokens } from "../../../db/schema/refresh-tokens.js";
 import { users } from "../../../db/schema/users.js";
 import { workspaces } from "../../../db/schema/workspaces.js";
 import { hashInvitationToken } from "../../../utils/invitation-tokens.js";
+import { hashOpaqueToken } from "../../../utils/opaque-tokens.js";
+import { prepareRefreshSession } from "../../../utils/refresh-tokens.js";
 import type { ClaimInvitationInput } from "./schema.js";
 
-export async function claimInvitation({ token, password }: ClaimInvitationInput) {
+export async function claimInvitation(
+  { token, password }: ClaimInvitationInput,
+  currentRefreshToken?: string,
+) {
   const tokenHash = await hashInvitationToken(token);
+  const currentRefreshTokenHash = currentRefreshToken
+    ? await hashOpaqueToken(currentRefreshToken)
+    : undefined;
   const invitation = db
     .select({
       email: invitations.email,
@@ -34,9 +43,27 @@ export async function claimInvitation({ token, password }: ClaimInvitationInput)
   }
 
   const passwordHash = await Bun.password.hash(password);
+  const session = await prepareRefreshSession();
 
   try {
     return db.transaction((tx) => {
+      if (
+        currentRefreshTokenHash &&
+        tx
+          .select({ tokenHash: refreshTokens.tokenHash })
+          .from(refreshTokens)
+          .where(
+            and(
+              eq(refreshTokens.tokenHash, currentRefreshTokenHash),
+              gt(refreshTokens.expiresAt, new Date()),
+              isNull(refreshTokens.revokedAt),
+            ),
+          )
+          .get()
+      ) {
+        return { kind: "active_session" as const };
+      }
+
       const current = tx
         .select({
           id: invitations.id,
@@ -78,10 +105,19 @@ export async function claimInvitation({ token, password }: ClaimInvitationInput)
         .set({ acceptedAt: new Date() })
         .where(eq(invitations.id, current.id))
         .run();
+      tx.insert(refreshTokens)
+        .values({
+          userId: user.id,
+          familyId: session.familyId,
+          tokenHash: session.tokenHash,
+          expiresAt: session.expiresAt,
+        })
+        .run();
 
       return {
         kind: "claimed" as const,
         user,
+        session,
         workspace: { id: current.workspaceId, name: current.workspaceName },
       };
     });

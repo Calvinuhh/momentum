@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { createApiError } from "../../../errors/api-error.js";
 import { validateJson } from "../../../middleware/validation.js";
-import { setAccessTokenCookie } from "../../../utils/session.js";
+import { startSession } from "../../../utils/session.js";
 import { loginSchema } from "./schema.js";
 import { authenticateUser } from "./service.js";
 
@@ -18,7 +18,7 @@ loginRouter.post("/", validateJson(loginSchema), async (c) => {
     throw createApiError(403, "EMAIL_NOT_VERIFIED", "Please verify your email before logging in");
   }
 
-  await setAccessTokenCookie(c, user.id);
+  await startSession(c, user.id);
 
   return c.json({ user });
 });
