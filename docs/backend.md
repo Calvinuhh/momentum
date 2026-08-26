@@ -36,7 +36,7 @@ Los errores HTTP propios usan la fábrica funcional `src/errors/api-error.ts`: `
 
 ## Observabilidad
 
-La consola muestra siempre timestamp, nivel, método, ruta, status y duración. `SHOW_LOGS=true` habilita además `logs/YYYY-MM-DD.log`, que añade request bodies para `POST`/`PUT`/`PATCH` y response bodies para `GET`/`POST`/`PUT`/`PATCH`/`DELETE` cuando son JSON compacto en una sola línea (`Request body: {...}` / `Response body: {...}` + blank line entre requests). Con `SHOW_LOGS=false` (valor por defecto) no se crean archivos. Passwords, tokens, cookies, secrets y claves se redactan; los emails se enmascaran. Cada preview se limita a 4 KiB y se omiten bodies no JSON, SSE, JSON malformado o capturas superiores a 64 KiB. La decisión de persistir archivos es independiente de `NODE_ENV`.
+La consola muestra siempre timestamp, nivel, método, ruta, status y duración. `SHOW_LOGS=true` habilita además `logs/YYYY-MM-DD.log`, que añade request bodies para `POST`/`PUT`/`PATCH` y response bodies para `GET`/`POST`/`PUT`/`PATCH`/`DELETE` cuando son JSON compacto en una sola línea (`Request body: {...}` / `Response body: {...}` + blank line entre requests). Con `SHOW_LOGS=false` (valor por defecto) no se crean archivos. Passwords, códigos, tokens, cookies, secrets y claves se redactan; los emails se enmascaran. Cada preview se limita a 4 KiB y se omiten bodies no JSON, SSE, JSON malformado o capturas superiores a 64 KiB. La decisión de persistir archivos es independiente de `NODE_ENV`.
 
 La sanitización y el truncado tienen pruebas unitarias con `bun test`.
 

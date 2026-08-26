@@ -8,8 +8,11 @@ function mediaType(contentType: string | null): string {
 
 function isSensitiveKey(key: string): boolean {
   const normalized = key.replace(/[^a-z0-9]/gi, "").toLowerCase();
-  return /(password|passwd|token|secret|authorization|cookie|apikey|privatekey|credential|cvv|cardnumber)/.test(
-    normalized,
+  return (
+    normalized === "code" ||
+    /(password|passwd|token|secret|authorization|cookie|apikey|privatekey|credential|cvv|cardnumber)/.test(
+      normalized,
+    )
   );
 }
 

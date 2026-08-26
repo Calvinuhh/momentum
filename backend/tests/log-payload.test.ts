@@ -7,6 +7,7 @@ describe("log payload previews", () => {
       JSON.stringify({
         email: "calvin@example.com",
         password: "Secret1!",
+        code: "6jRHqd",
         nested: { accessToken: "token", ownerEmail: "owner@example.com" },
       }),
       "application/json",
@@ -15,6 +16,7 @@ describe("log payload previews", () => {
     expect(JSON.parse(preview)).toEqual({
       email: "c***@example.com",
       password: "[REDACTED]",
+      code: "[REDACTED]",
       nested: { accessToken: "[REDACTED]", ownerEmail: "o***@example.com" },
     });
     expect(preview).not.toContain("\n");
