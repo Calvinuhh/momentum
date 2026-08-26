@@ -15,6 +15,10 @@ loginRouter.post("/", validateJson(loginSchema), async (c) => {
     throw createApiError(401, "INVALID_CREDENTIALS", "Invalid credentials");
   }
 
+  if ("unverified" in user) {
+    throw createApiError(403, "EMAIL_NOT_VERIFIED", "Please verify your email before logging in");
+  }
+
   const token = await createAccessToken(user.id);
 
   setCookie(c, "access_token", token, {

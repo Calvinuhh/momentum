@@ -17,11 +17,11 @@ Pinia no sustituye a TanStack Vue Query ni funciona como caché manual de respue
 
 ## Rutas y vistas
 
-- `/` landing Momentum (pública), `/register` y `/login` (`requiresGuest`) con validación `safeParse` + `z.flattenError` + `useFormErrors`, `/workspaces` y `/workspaces/:id` (`requiresAuth`, 4 estados loading/error/empty/success), `/:pathMatch(.*)*` 404. El header y el hero consultan `auth/me`: autenticado muestran `Workspaces`/`Open workspaces` + `Log out`; anónimo muestra `Log in` + `Sign up` y `Get started`. Las rutas guest redirigen a `/` si ya existe sesión.
+- `/` landing Momentum (pública), `/register`, `/login` y `/confirm-account` (`requiresGuest`) con validación `safeParse` + `z.flattenError` + `useFormErrors`, `/workspaces` y `/workspaces/:id` (`requiresAuth`, 4 estados loading/error/empty/success), `/:pathMatch(.*)*` 404. El header y el hero consultan `auth/me`: autenticado muestran `Workspaces`/`Open workspaces` + `Log out`; anónimo muestra `Log in` + `Sign up` y `Get started`. Registro dirige a la confirmación de email y las rutas guest redirigen a `/` si ya existe sesión.
 
 ## API
 
-- `fetch` wrapper `VITE_BACKEND_URL` + `credentials:include`, `ApiError` `{code,details}` y helper `fieldErrors`; `api/auth.ts` expone `getMe`, `GET /auth/me` se usa tanto por el header como por el guard.
+- `fetch` wrapper `VITE_BACKEND_URL` + `credentials:include`, `ApiError` `{code,details}` y helper `fieldErrors`; `api/auth.ts` expone `verifyEmail` y `getMe`, `GET /auth/me` se usa tanto por el header como por el guard.
 
 ## Interfaz
 

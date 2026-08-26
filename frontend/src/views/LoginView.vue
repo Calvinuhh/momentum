@@ -11,8 +11,9 @@ const router = useRouter()
 const route = useRoute()
 const qc = useQueryClient()
 const auth = useAuthStore()
-const form = reactive({ email: '', password: '' })
+const form = reactive({ email: typeof route.query.email === 'string' ? route.query.email : '', password: '' })
 const showPassword = ref(false)
+const verifiedMessage = route.query.verified === '1'
 const { errors, serverError, clear, applyZod, applyApi } = useFormErrors()
 
 const { mutate, isPending } = useMutation({
@@ -45,6 +46,9 @@ function onSubmit() {
 
     <p v-if="serverError" class="mt-4 rounded bg-red-950/50 px-3 py-2 text-sm text-red-300">
       {{ serverError }}
+    </p>
+    <p v-if="verifiedMessage" class="mt-4 rounded bg-green-950/50 px-3 py-2 text-sm text-green-300">
+      Email confirmed. You can now log in.
     </p>
 
     <form class="mt-6 space-y-4" @submit.prevent="onSubmit">

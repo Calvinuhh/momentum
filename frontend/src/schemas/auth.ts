@@ -24,5 +24,10 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Invalid credentials'),
 })
 
+export const verifyEmailSchema = z.object({
+  email: emailSchema,
+  code: z.string().regex(/^[A-Za-z0-9]{6}$/, 'Enter the 6-character verification code.'),
+})
+
 export type RegisterInput = z.infer<typeof registerSchema>
 export type LoginInput = z.infer<typeof loginSchema>

@@ -16,6 +16,13 @@ export function login(data: { email: string; password: string }) {
   })
 }
 
+export function verifyEmail(data: { email: string; code: string }) {
+  return apiFetch<{ user: User }>('/api/v1/auth/verify-email', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
 export async function getMe() {
   const response = await apiFetch<{ user: User }>('/api/v1/auth/me')
   return response.user

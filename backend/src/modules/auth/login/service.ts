@@ -15,6 +15,10 @@ export async function authenticateUser({ email, password }: LoginInput) {
     return null;
   }
 
+  if (!user.emailVerifiedAt) {
+    return { unverified: true as const };
+  }
+
   return { id: user.id, email: user.email };
 }
 
@@ -30,8 +34,6 @@ export async function createAccessToken(userId: string): Promise<string> {
     env.JWT_SECRET,
     "HS256",
   )
-
-  env.NODE_ENV === "development" ? console.log(token) : null
 
   return token
 }

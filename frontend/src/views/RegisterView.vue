@@ -13,7 +13,7 @@ const { errors, serverError, clear, applyZod, applyApi } = useFormErrors()
 
 const { mutate, isPending } = useMutation({
   mutationFn: register,
-  onSuccess: () => router.push('/login'),
+  onSuccess: (data) => router.push({ path: '/confirm-account', query: { email: data.user.email } }),
   onError: (e: unknown) => {
     applyApi(e, { EMAIL_ALREADY_REGISTERED: 'email' })
   },
