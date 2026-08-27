@@ -5,6 +5,7 @@ dist/
 dev-logs/
 logs/
 data/
+local-scripts/
 .vscode/
 *.db
 *.log

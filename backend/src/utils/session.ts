@@ -1,5 +1,5 @@
 import type { Context } from "hono";
-import { and, eq, isNull, lte } from "drizzle-orm";
+import { and, eq, isNull, lte, notInArray, or } from "drizzle-orm";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { sign } from "hono/jwt";
 import { env } from "../config/env.js";
@@ -66,7 +66,7 @@ export async function setSessionCookies(
   setRefreshTokenCookie(c, refreshToken, expiresAt);
 }
 
-export async function revokeRefreshFamily(token: string) {
+export async function deleteRefreshFamily(token: string) {
   const tokenHash = await hashOpaqueToken(token);
   db.transaction((tx) => {
     const current = tx
@@ -76,10 +76,7 @@ export async function revokeRefreshFamily(token: string) {
       .get();
 
     if (current) {
-      tx.update(refreshTokens)
-        .set({ revokedAt: new Date() })
-        .where(and(eq(refreshTokens.familyId, current.familyId), isNull(refreshTokens.revokedAt)))
-        .run();
+      tx.delete(refreshTokens).where(eq(refreshTokens.familyId, current.familyId)).run();
     }
   });
 }
@@ -97,14 +94,22 @@ export async function startSession(c: Context, userId: string) {
         .where(eq(refreshTokens.tokenHash, currentTokenHash))
         .get();
       if (current) {
-        tx.update(refreshTokens)
-          .set({ revokedAt: new Date() })
-          .where(and(eq(refreshTokens.familyId, current.familyId), isNull(refreshTokens.revokedAt)))
-          .run();
+        tx.delete(refreshTokens).where(eq(refreshTokens.familyId, current.familyId)).run();
       }
     }
 
-    tx.delete(refreshTokens).where(lte(refreshTokens.expiresAt, new Date())).run();
+    const activeFamilies = tx
+      .selectDistinct({ familyId: refreshTokens.familyId })
+      .from(refreshTokens)
+      .where(isNull(refreshTokens.revokedAt));
+    tx.delete(refreshTokens)
+      .where(
+        or(
+          lte(refreshTokens.expiresAt, new Date()),
+          notInArray(refreshTokens.familyId, activeFamilies),
+        ),
+      )
+      .run();
     tx.insert(refreshTokens)
       .values({
         userId,

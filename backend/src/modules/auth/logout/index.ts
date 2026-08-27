@@ -1,8 +1,8 @@
 import { Hono } from "hono";
 import {
   clearSessionCookies,
+  deleteRefreshFamily,
   getRefreshTokenCookie,
-  revokeRefreshFamily,
 } from "../../../utils/session.js";
 
 const logoutRouter = new Hono();
@@ -10,7 +10,7 @@ const logoutRouter = new Hono();
 logoutRouter.post("/", async (c) => {
   const refreshToken = getRefreshTokenCookie(c);
   try {
-    if (refreshToken) await revokeRefreshFamily(refreshToken);
+    if (refreshToken) await deleteRefreshFamily(refreshToken);
   } finally {
     clearSessionCookies(c);
   }
