@@ -25,6 +25,33 @@ function installSessionLocks() {
 }
 
 describe('apiFetch session refresh', () => {
+  test('does not repeat an unauthorized request before a failed refresh', async () => {
+    installSessionLocks()
+
+    const fetchMock = vi.fn<FetchMock>(async (input) => {
+      const path = new URL(input.toString()).pathname
+      return path === '/api/v1/auth/refresh'
+        ? Response.json(
+            { error: { code: 'INVALID_REFRESH_TOKEN', message: 'Invalid or expired refresh token' } },
+            { status: 401 },
+          )
+        : Response.json(
+            { error: { code: 'UNAUTHORIZED', message: 'Authentication required' } },
+            { status: 401 },
+          )
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(apiFetch('/api/v1/auth/me')).rejects.toBeInstanceOf(ApiError)
+
+    expect(
+      fetchMock.mock.calls.filter(([input]) => new URL(input.toString()).pathname === '/api/v1/auth/me'),
+    ).toHaveLength(1)
+    expect(
+      fetchMock.mock.calls.filter(([input]) => new URL(input.toString()).pathname === '/api/v1/auth/refresh'),
+    ).toHaveLength(1)
+  })
+
   test('shares one refresh across concurrent unauthorized requests', async () => {
     installSessionLocks()
 
@@ -53,6 +80,12 @@ describe('apiFetch session refresh', () => {
     expect(
       fetchMock.mock.calls.filter(([input]) => new URL(input.toString()).pathname === '/api/v1/auth/refresh'),
     ).toHaveLength(1)
+    expect(
+      fetchMock.mock.calls.filter(([input]) => new URL(input.toString()).pathname === '/api/v1/workspaces'),
+    ).toHaveLength(2)
+    expect(
+      fetchMock.mock.calls.filter(([input]) => new URL(input.toString()).pathname === '/api/v1/auth/me'),
+    ).toHaveLength(2)
   })
 
   test('does not retry an old request after the authenticated account changes', async () => {

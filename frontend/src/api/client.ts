@@ -22,6 +22,7 @@ export class ApiError extends Error {
 const baseUrl = (import.meta.env.VITE_BACKEND_URL ?? 'http://localhost:3000').replace(/\/+$/, '')
 const refreshPath = '/api/v1/auth/refresh'
 const sessionGenerationKey = 'momentum:sessionGeneration'
+const refreshGenerationKey = 'momentum:refreshGeneration'
 const sessionTransitionPaths = new Set([
   '/api/v1/auth/login',
   '/api/v1/auth/logout',
@@ -54,12 +55,21 @@ function bumpSessionGeneration() {
   localStorage.setItem(sessionGenerationKey, crypto.randomUUID())
 }
 
+function getRefreshGeneration(): string {
+  return localStorage.getItem(refreshGenerationKey) ?? ''
+}
+
+function bumpRefreshGeneration() {
+  localStorage.setItem(refreshGenerationKey, crypto.randomUUID())
+}
+
 function withSessionLock<T>(callback: () => Promise<T>): Promise<T> {
   return navigator.locks.request('momentum-session', callback)
 }
 
 export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   const generation = getSessionGeneration()
+  const refreshGeneration = getRefreshGeneration()
   let res: Response
 
   if (sessionTransitionPaths.has(path) && navigator.locks) {
@@ -83,9 +93,11 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
   ) {
     res = await withSessionLock(async () => {
       if (getSessionGeneration() !== generation) return res
-      const retried = await request(path, init)
-      if (retried.status !== 401) return retried
-      return (await refreshSession()) ? request(path, init) : retried
+      if (getRefreshGeneration() !== refreshGeneration) return request(path, init)
+      const refreshed = await refreshSession()
+      if (!refreshed || getSessionGeneration() !== generation) return res
+      bumpRefreshGeneration()
+      return request(path, init)
     })
   }
 
