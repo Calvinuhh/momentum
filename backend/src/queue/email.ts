@@ -4,6 +4,8 @@ import { and, eq, gt, isNull } from "drizzle-orm";
 import { env } from "../config/env.js";
 import { db } from "../db/index.js";
 import { invitations } from "../db/schema/invitations.js";
+import { notifications } from "../db/schema/notifications.js";
+import { users } from "../db/schema/users.js";
 import { sendVerificationEmail, sendWorkspaceInvitationEmail } from "../integrations/email.js";
 import { logger } from "../utils/logger.js";
 
@@ -64,8 +66,9 @@ export function startEmailWorker() {
       }
       if ("type" in job.data && job.data.type === "workspace-invitation") {
         const invitation = db
-          .select({ id: invitations.id })
+          .select({ id: invitations.id, inviterEmail: users.email })
           .from(invitations)
+          .innerJoin(users, eq(users.id, invitations.invitedBy))
           .where(
             and(
               eq(invitations.id, job.data.invitationId),
@@ -80,6 +83,7 @@ export function startEmailWorker() {
           job.data.email,
           job.data.token,
           job.data.workspaceName,
+          invitation.inviterEmail,
           job.data.recipientExists,
         );
         return;
@@ -97,14 +101,29 @@ export function startEmailWorker() {
       job.data.type === "workspace-invitation" &&
       job.attemptsMade >= (job.opts.attempts ?? 1)
     ) {
-      db.delete(invitations)
-        .where(
-          and(
-            eq(invitations.id, job.data.invitationId),
-            isNull(invitations.acceptedAt),
-          ),
-        )
-        .run();
+      const invitationId = job.data.invitationId;
+      db.transaction((tx) => {
+        const deleted = tx
+          .delete(invitations)
+          .where(
+            and(
+              eq(invitations.id, invitationId),
+              isNull(invitations.acceptedAt),
+            ),
+          )
+          .returning({ id: invitations.id })
+          .get();
+        if (deleted) {
+          tx.delete(notifications)
+            .where(
+              and(
+                eq(notifications.type, "WORKSPACE_INVITATION"),
+                eq(notifications.resourceId, deleted.id),
+              ),
+            )
+            .run();
+        }
+      });
     }
   });
   worker.on("error", (error) => logger.error("Email worker error", { message: error.message }));

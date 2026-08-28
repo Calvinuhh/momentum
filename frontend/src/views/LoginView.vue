@@ -11,6 +11,8 @@ const router = useRouter()
 const route = useRoute()
 const qc = useQueryClient()
 const auth = useAuthStore()
+const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
+const registerTarget = redirect ? { path: '/register', query: { redirect } } : '/register'
 const form = reactive({ email: typeof route.query.email === 'string' ? route.query.email : '', password: '' })
 const showPassword = ref(false)
 const verifiedMessage = route.query.verified === '1'
@@ -22,8 +24,7 @@ const { mutate, isPending } = useMutation({
     auth.setUser(data.user)
     await qc.invalidateQueries({ queryKey: ['auth', 'me'] })
     await qc.invalidateQueries({ queryKey: ['workspaces'] })
-    const redirect = (route.query.redirect as string) || '/workspaces'
-    router.push(redirect)
+    router.push(redirect || '/workspaces')
   },
   onError: applyApi,
 })
@@ -98,7 +99,7 @@ function onSubmit() {
 
     <p class="mt-4 text-center text-sm text-neutral-400">
       No account yet?
-      <RouterLink to="/register" class="text-brand-400 hover:underline">Sign up</RouterLink>
+      <RouterLink :to="registerTarget" class="text-brand-400 hover:underline">Sign up</RouterLink>
     </p>
   </div>
 </template>

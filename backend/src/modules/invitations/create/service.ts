@@ -2,6 +2,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { db } from "../../../db/index.js";
 import { invitations } from "../../../db/schema/invitations.js";
 import { memberships } from "../../../db/schema/memberships.js";
+import { notifications } from "../../../db/schema/notifications.js";
 import { users } from "../../../db/schema/users.js";
 import { workspaces } from "../../../db/schema/workspaces.js";
 import { enqueueWorkspaceInvitationEmail } from "../../../queue/email.js";
@@ -20,9 +21,14 @@ export async function createInvitation(
   try {
     result = db.transaction((tx) => {
       const access = tx
-        .select({ role: memberships.role, workspaceName: workspaces.name })
+        .select({
+          role: memberships.role,
+          workspaceName: workspaces.name,
+          inviterEmail: users.email,
+        })
         .from(memberships)
         .innerJoin(workspaces, eq(workspaces.id, memberships.workspaceId))
+        .innerJoin(users, eq(users.id, memberships.userId))
         .where(
           and(
             eq(memberships.workspaceId, workspaceId),
@@ -67,7 +73,17 @@ export async function createInvitation(
       if (pending?.expiresAt && pending.expiresAt > new Date()) {
         return { kind: "already_pending" as const };
       }
-      if (pending) tx.delete(invitations).where(eq(invitations.id, pending.id)).run();
+      if (pending) {
+        tx.delete(notifications)
+          .where(
+            and(
+              eq(notifications.type, "WORKSPACE_INVITATION"),
+              eq(notifications.resourceId, pending.id),
+            ),
+          )
+          .run();
+        tx.delete(invitations).where(eq(invitations.id, pending.id)).run();
+      }
 
       const invitation = tx
         .insert(invitations)
@@ -86,6 +102,19 @@ export async function createInvitation(
           createdAt: invitations.createdAt,
         })
         .get();
+
+      if (recipient) {
+        tx.insert(notifications)
+          .values({
+            userId: recipient.id,
+            workspaceId,
+            type: "WORKSPACE_INVITATION",
+            resourceId: invitation.id,
+            title: "Workspace invitation",
+            body: `${access.inviterEmail} invited you to join ${access.workspaceName}.`,
+          })
+          .run();
+      }
 
       return {
         kind: "created" as const,
@@ -116,7 +145,17 @@ export async function createInvitation(
       recipientExists: result.recipientExists,
     });
   } catch (error) {
-    db.delete(invitations).where(eq(invitations.id, result.invitation.id)).run();
+    db.transaction((tx) => {
+      tx.delete(notifications)
+        .where(
+          and(
+            eq(notifications.type, "WORKSPACE_INVITATION"),
+            eq(notifications.resourceId, result.invitation.id),
+          ),
+        )
+        .run();
+      tx.delete(invitations).where(eq(invitations.id, result.invitation.id)).run();
+    });
     throw error;
   }
 

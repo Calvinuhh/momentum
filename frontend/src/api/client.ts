@@ -23,11 +23,7 @@ const baseUrl = (import.meta.env.VITE_BACKEND_URL ?? 'http://localhost:3000').re
 const refreshPath = '/api/v1/auth/refresh'
 const sessionGenerationKey = 'momentum:sessionGeneration'
 const refreshGenerationKey = 'momentum:refreshGeneration'
-const sessionTransitionPaths = new Set([
-  '/api/v1/auth/login',
-  '/api/v1/auth/logout',
-  '/api/v1/invitations/claim',
-])
+const sessionTransitionPaths = new Set(['/api/v1/auth/login', '/api/v1/auth/logout'])
 
 function request(path: string, init: RequestInit): Promise<Response> {
   const headers = new Headers(init.headers)

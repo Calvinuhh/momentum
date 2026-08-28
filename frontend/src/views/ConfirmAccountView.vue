@@ -8,12 +8,18 @@ import { useFormErrors } from '@/composables/useFormErrors'
 
 const route = useRoute()
 const router = useRouter()
+const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
+const loginTarget = redirect ? { path: '/login', query: { redirect } } : '/login'
 const form = reactive({ email: typeof route.query.email === 'string' ? route.query.email : '', code: '' })
 const { errors, serverError, clear, applyZod, applyApi } = useFormErrors()
 
 const { mutate, isPending } = useMutation({
   mutationFn: verifyEmail,
-  onSuccess: () => router.push({ path: '/login', query: { email: form.email, verified: '1' } }),
+  onSuccess: () =>
+    router.push({
+      path: '/login',
+      query: { email: form.email, verified: '1', ...(redirect ? { redirect } : {}) },
+    }),
   onError: applyApi,
 })
 
@@ -75,7 +81,7 @@ function onSubmit() {
 
     <p class="mt-4 text-center text-sm text-neutral-400">
       Already confirmed?
-      <RouterLink to="/login" class="text-brand-400 hover:underline">Log in</RouterLink>
+      <RouterLink :to="loginTarget" class="text-brand-400 hover:underline">Log in</RouterLink>
     </p>
   </div>
 </template>

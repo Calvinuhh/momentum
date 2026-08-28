@@ -1,5 +1,4 @@
 import { apiFetch } from './client'
-import type { User } from './auth'
 
 export type Invitation = {
   id: string
@@ -11,6 +10,16 @@ export type Invitation = {
 
 type InvitationWorkspace = { id: string; name: string }
 
+export type InvitationReference = { token: string } | { invitationId: string }
+
+export type InvitationPreview = {
+  workspace: InvitationWorkspace
+  inviterEmail: string
+  role: 'ADMIN' | 'MEMBER'
+  expiresAt: string
+  eligibility: 'accept' | 'accepted'
+}
+
 export function createWorkspaceInvitation(
   workspaceId: string,
   data: { email: string; role: 'ADMIN' | 'MEMBER' },
@@ -21,16 +30,16 @@ export function createWorkspaceInvitation(
   })
 }
 
-export function acceptInvitation(token: string) {
-  return apiFetch<{ workspace: InvitationWorkspace }>('/api/v1/invitations/accept', {
+export function previewInvitation(reference: InvitationReference) {
+  return apiFetch<{ invitation: InvitationPreview }>('/api/v1/invitations/preview', {
     method: 'POST',
-    body: JSON.stringify({ token }),
+    body: JSON.stringify(reference),
   })
 }
 
-export function claimInvitation(data: { token: string; password: string }) {
-  return apiFetch<{ user: User; workspace: InvitationWorkspace }>('/api/v1/invitations/claim', {
+export function acceptInvitation(reference: InvitationReference) {
+  return apiFetch<{ workspace: InvitationWorkspace }>('/api/v1/invitations/accept', {
     method: 'POST',
-    body: JSON.stringify(data),
+    body: JSON.stringify(reference),
   })
 }

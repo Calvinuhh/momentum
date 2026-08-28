@@ -1,10 +1,10 @@
 import { Hono } from "hono";
 import acceptInvitationRouter from "./accept/index.js";
-import claimInvitationRouter from "./claim/index.js";
+import previewInvitationRouter from "./preview/index.js";
 
 const invitationsRouter = new Hono();
 
 invitationsRouter.route("/accept", acceptInvitationRouter);
-invitationsRouter.route("/claim", claimInvitationRouter);
+invitationsRouter.route("/preview", previewInvitationRouter);
 
 export default invitationsRouter;

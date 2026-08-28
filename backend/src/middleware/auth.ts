@@ -21,11 +21,9 @@ export const requireAuth = createMiddleware(async (c, next) => {
 
   try {
     const payload = await verify(token, env.JWT_SECRET, "HS256");
-    const sub = (payload as { sub?: unknown }).sub;
-    if (typeof sub !== "string" || !sub) {
-      throw createApiError(401, "UNAUTHORIZED", "Invalid token");
-    }
-    c.set("userId", sub);
+    const userId = (payload as { sub?: unknown }).sub;
+    if (typeof userId !== "string" || !userId) throw new Error();
+    c.set("userId", userId);
   } catch {
     throw createApiError(401, "UNAUTHORIZED", "Invalid or expired token");
   }

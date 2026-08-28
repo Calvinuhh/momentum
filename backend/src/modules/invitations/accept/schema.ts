@@ -1,6 +1,6 @@
-import { z } from "zod";
-import { invitationTokenSchema } from "../../../utils/invitation-tokens.js";
+import { previewInvitationSchema } from "../preview/schema.js";
+import type { InvitationReference } from "../preview/schema.js";
 
-export const acceptInvitationSchema = z.object({ token: invitationTokenSchema });
+export const acceptInvitationSchema = previewInvitationSchema;
 
-export type AcceptInvitationInput = z.infer<typeof acceptInvitationSchema>;
+export type AcceptInvitationInput = InvitationReference;

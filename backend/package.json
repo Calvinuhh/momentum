@@ -16,7 +16,7 @@
     "@paralleldrive/cuid2": "^3.3.0",
     "bullmq": "^6.2.2",
     "drizzle-orm": "^0.45.2",
-    "hono": "^4.13.3",
+    "hono": "^4.13.5",
     "nodemailer": "^9.0.5",
     "zod": "^4.4.3"
   },

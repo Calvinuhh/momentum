@@ -31,6 +31,7 @@ export function listNotifications(userId: string, { limit, cursor }: ListNotific
     .select({
       id: notifications.id,
       type: notifications.type,
+      invitationId: notifications.resourceId,
       title: notifications.title,
       body: notifications.body,
       readAt: notifications.readAt,

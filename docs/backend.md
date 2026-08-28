@@ -16,7 +16,7 @@ El código fuente, identificadores, comentarios técnicos y respuestas de la API
 
 ## Organización
 
-El backend utiliza una organización modular por dominio y endpoint. Actualmente implementa auth, workspaces e invitaciones mediante `modules/invitations/{create,accept,claim}`.
+El backend utiliza una organización modular por dominio y endpoint. Actualmente implementa auth, workspaces e invitaciones mediante `modules/invitations/{create,preview,accept}`.
 
 `modules/index.ts` monta los módulos principales con `app.route()`. Cada módulo puede montar sus endpoints relacionados y cada endpoint mantiene cerca su router, validación, lógica de negocio y tipos.
 
@@ -58,11 +58,11 @@ El hard delete es un endpoint backend-only y no tiene llamada, control ni flujo 
 
 ## Invitaciones
 
-`POST /api/v1/workspaces/:id/invitations` permite invitar como `ADMIN` o `MEMBER` a emails registrados o no registrados y encola un email con token URL-safe de 32 bytes válido durante 7 días. Solo se almacena SHA-256. `POST /api/v1/invitations/accept` crea la membership para el usuario autenticado cuyo email coincide. `POST /api/v1/invitations/claim` crea atómicamente usuario verificado, membership, refresh y aceptación para destinatarios sin cuenta, e inicia su sesión; rechaza la reclamación si el navegador ya mantiene otra sesión refresh activa. No se crean usuarios provisionales al enviar invitaciones.
+`POST /api/v1/workspaces/:id/invitations` permite invitar como `ADMIN` o `MEMBER` a emails registrados o no registrados y encola un email que identifica invitador y workspace, con expiración de 7 días. Para usuarios registrados incluye un token en fragmento y crea una notificación interna; para destinatarios nuevos enlaza a registro sin token y `verify-email` crea después sus notificaciones pendientes sin duplicados. `POST /api/v1/invitations/preview` exige sesión y coincidencia de email antes de consultar token o ID y devolver workspace, invitador, rol, expiración y elegibilidad. `POST /api/v1/invitations/accept` acepta token o ID, exige la misma autorización, crea la membership y marca la notificación leída. No se crean usuarios provisionales.
 
 ## Notificaciones
 
-`GET /api/v1/notifications?limit=20&cursor=<id>` devuelve las notificaciones recientes del usuario autenticado, ordenadas por fecha descendente, junto con `unreadCount` y `nextCursor`; `limit` acepta valores entre 1 y 50. `PATCH /api/v1/notifications/:id/read` y `PATCH /api/v1/notifications/read-all` marcan una o todas las notificaciones propias como leídas y son idempotentes. Los cursores se validan contra el usuario autenticado y la API no expone campos internos que todavía no consume el frontend.
+`GET /api/v1/notifications?limit=20&cursor=<id>` devuelve las notificaciones recientes del usuario autenticado, ordenadas por fecha descendente, junto con `unreadCount` y `nextCursor`; `limit` acepta valores entre 1 y 50. Las invitaciones incluyen `invitationId` para abrir su revisión autenticada sin exponer el token. `PATCH /api/v1/notifications/:id/read` y `PATCH /api/v1/notifications/read-all` marcan una o todas las notificaciones propias como leídas y son idempotentes.
 
 ## Datos
 

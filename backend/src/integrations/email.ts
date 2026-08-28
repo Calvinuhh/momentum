@@ -32,18 +32,23 @@ export function sendWorkspaceInvitationEmail(
   email: string,
   token: string,
   workspaceName: string,
+  inviterEmail: string,
   recipientExists: boolean,
 ) {
   const frontendOrigin = env.CORS_ORIGIN.split(",")[0]?.trim() ?? "";
-  const url = new URL("/invitations/accept", frontendOrigin);
-  url.hash = new URLSearchParams({ token, mode: recipientExists ? "accept" : "claim" }).toString();
-  const action = recipientExists ? "Log in to accept the invitation" : "Create your password and join";
+  const url = new URL(recipientExists ? "/invitations/accept" : "/register", frontendOrigin);
+  if (recipientExists) url.hash = new URLSearchParams({ token }).toString();
+  const action = recipientExists ? "Review invitation" : "Create your Momentum account";
+  const message = `${inviterEmail} invited you to join ${workspaceName}.`;
+  const instructions = recipientExists
+    ? ""
+    : " Register with this email address, confirm your account, and then review the invitation from your notifications.";
 
   return transporter.sendMail({
     from: { name: env.SMTP_FROM_NAME, address: env.SMTP_USER },
     to: email,
-    subject: `You were invited to ${workspaceName}`,
-    text: `You were invited to join ${workspaceName} in Momentum. ${action}: ${url.toString()} This invitation expires in 7 days.`,
-    html: `<p>You were invited to join <strong>${escapeHtml(workspaceName)}</strong> in Momentum.</p><p><a href="${escapeHtml(url.toString())}">${action}</a></p><p>This invitation expires in 7 days.</p>`,
+    subject: `${inviterEmail} invited you to ${workspaceName}`,
+    text: `${message} ${action}: ${url.toString()}.${instructions} This invitation expires in 7 days.`,
+    html: `<p><strong>${escapeHtml(inviterEmail)}</strong> invited you to join <strong>${escapeHtml(workspaceName)}</strong>.</p><p><a href="${escapeHtml(url.toString())}">${action}</a></p>${recipientExists ? "" : "<p>Register with this email address, confirm your account, and then review the invitation from your notifications.</p>"}<p>This invitation expires in 7 days.</p>`,
   });
 }

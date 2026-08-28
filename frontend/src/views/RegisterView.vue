@@ -1,19 +1,26 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useMutation } from '@tanstack/vue-query'
 import { registerSchema } from '@/schemas/auth'
 import { register } from '@/api/auth'
 import { useFormErrors } from '@/composables/useFormErrors'
 
 const router = useRouter()
+const route = useRoute()
+const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
+const loginTarget = redirect ? { path: '/login', query: { redirect } } : '/login'
 const form = reactive({ email: '', password: '' })
 const showPassword = ref(false)
 const { errors, serverError, clear, applyZod, applyApi } = useFormErrors()
 
 const { mutate, isPending } = useMutation({
   mutationFn: register,
-  onSuccess: (data) => router.push({ path: '/confirm-account', query: { email: data.user.email } }),
+  onSuccess: (data) =>
+    router.push({
+      path: '/confirm-account',
+      query: { email: data.user.email, ...(redirect ? { redirect } : {}) },
+    }),
   onError: (e: unknown) => {
     applyApi(e, { EMAIL_ALREADY_REGISTERED: 'email' })
   },
@@ -89,7 +96,7 @@ function onSubmit() {
 
     <p class="mt-4 text-center text-sm text-neutral-400">
       Already have an account?
-      <RouterLink to="/login" class="text-brand-400 hover:underline">Log in</RouterLink>
+      <RouterLink :to="loginTarget" class="text-brand-400 hover:underline">Log in</RouterLink>
     </p>
   </div>
 </template>

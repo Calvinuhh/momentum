@@ -3,6 +3,7 @@ import { watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { getMe, logout } from '@/api/auth'
+import NotificationBell from '@/components/notifications/NotificationBell.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
@@ -21,8 +22,10 @@ watch(user, (value) => auth.setUser(value ?? null), { immediate: true })
 const { mutate: doLogout, isPending: isLogoutPending } = useMutation({
   mutationFn: logout,
   onSettled: () => {
+    if (auth.user) sessionStorage.removeItem(`momentum:notifications-summary:${auth.user.id}`)
     auth.reset()
     qc.removeQueries({ queryKey: ['auth', 'me'] })
+    qc.removeQueries({ queryKey: ['notifications'] })
     qc.removeQueries({ queryKey: ['workspaces'] })
     router.push('/')
   },
@@ -41,6 +44,7 @@ const { mutate: doLogout, isPending: isLogoutPending } = useMutation({
       </RouterLink>
       <nav v-if="!isAuthPending" class="flex items-center gap-3 text-sm">
         <template v-if="auth.isAuthed">
+          <NotificationBell v-if="auth.user" :user-id="auth.user.id" />
           <RouterLink to="/workspaces" class="rounded px-3 py-1.5 hover:bg-neutral-900"
             >Workspaces</RouterLink
           >

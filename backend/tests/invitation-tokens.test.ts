@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { claimInvitationSchema } from "../src/modules/invitations/claim/schema.js";
 import { createInvitationSchema } from "../src/modules/invitations/create/schema.js";
+import { previewInvitationSchema } from "../src/modules/invitations/preview/schema.js";
 import { createInvitationToken, hashInvitationToken } from "../src/utils/invitation-tokens.js";
 
 describe("workspace invitations", () => {
@@ -22,9 +22,11 @@ describe("workspace invitations", () => {
     expect(createInvitationSchema.safeParse({ email: "user@example.com", role: "OWNER" }).success).toBe(false);
   });
 
-  test("requires the normal password policy when claiming", () => {
+  test("accepts only one valid invitation reference", () => {
     const token = createInvitationToken();
-    expect(claimInvitationSchema.safeParse({ token, password: "weak" }).success).toBe(false);
-    expect(claimInvitationSchema.safeParse({ token, password: "StrongPass!" }).success).toBe(true);
+    expect(previewInvitationSchema.safeParse({ token }).success).toBe(true);
+    expect(previewInvitationSchema.safeParse({ invitationId: "a".repeat(24) }).success).toBe(true);
+    expect(previewInvitationSchema.safeParse({ token, invitationId: "a".repeat(24) }).success).toBe(false);
+    expect(previewInvitationSchema.safeParse({ invitationId: "../invitation" }).success).toBe(false);
   });
 });
