@@ -10,6 +10,7 @@ function isSensitiveKey(key: string): boolean {
   const normalized = key.replace(/[^a-z0-9]/gi, "").toLowerCase();
   return (
     normalized === "code" ||
+    normalized === "fid" ||
     /(password|passwd|token|secret|authorization|cookie|apikey|privatekey|credential|cvv|cardnumber)/.test(
       normalized,
     )

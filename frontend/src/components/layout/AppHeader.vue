@@ -17,10 +17,31 @@ const { data: user, isPending: isAuthPending } = useQuery({
   retry: false,
 })
 
-watch(user, (value) => auth.setUser(value ?? null), { immediate: true })
+watch(
+  user,
+  (value) => {
+    auth.setUser(value ?? null)
+    if (value) {
+      void import('@/lib/browserNotifications')
+        .then(({ startBrowserNotifications }) => startBrowserNotifications(value.id))
+        .catch(() => undefined)
+    }
+  },
+  { immediate: true },
+)
 
 const { mutate: doLogout, isPending: isLogoutPending } = useMutation({
-  mutationFn: logout,
+  mutationFn: () => {
+    const userId = auth.user?.id
+    if (userId) {
+      void import('@/lib/browserNotifications')
+        .then(({ unregisterBrowserNotificationsForLogout }) =>
+          unregisterBrowserNotificationsForLogout(userId),
+        )
+        .catch(() => undefined)
+    }
+    return logout()
+  },
   onSettled: () => {
     if (auth.user) sessionStorage.removeItem(`momentum:notifications-summary:${auth.user.id}`)
     auth.reset()
@@ -34,19 +55,22 @@ const { mutate: doLogout, isPending: isLogoutPending } = useMutation({
 
 <template>
   <header class="sticky top-0 z-40 border-b border-neutral-800 bg-neutral-950/80 backdrop-blur">
-    <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+    <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
       <RouterLink to="/" class="flex items-center gap-2 font-semibold tracking-tight">
         <span
           class="h-7 w-7 rounded bg-brand-500 grid place-items-center text-sm font-bold text-white"
           >M</span
         >
-        Momentum
+        <span class="hidden sm:inline">Momentum</span>
       </RouterLink>
-      <nav v-if="!isAuthPending" class="flex items-center gap-3 text-sm">
+      <nav v-if="!isAuthPending" class="flex items-center gap-1 text-sm sm:gap-3">
         <template v-if="auth.isAuthed">
           <NotificationBell v-if="auth.user" :user-id="auth.user.id" />
           <RouterLink to="/workspaces" class="rounded px-3 py-1.5 hover:bg-neutral-900"
             >Workspaces</RouterLink
+          >
+          <RouterLink to="/settings" class="rounded px-2 py-1.5 hover:bg-neutral-900 sm:px-3"
+            >Settings</RouterLink
           >
           <button
             :disabled="isLogoutPending"

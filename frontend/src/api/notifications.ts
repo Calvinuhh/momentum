@@ -29,3 +29,19 @@ export function markNotificationRead(id: string) {
 export function markAllNotificationsRead() {
   return apiFetch<void>('/api/v1/notifications/read-all', { method: 'PATCH' })
 }
+
+export type PushInstallationInput = { fid: string; userId: string }
+
+export function registerPushInstallation(data: PushInstallationInput) {
+  return apiFetch<void>('/api/v1/notifications/installations', {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  })
+}
+
+export function deletePushInstallation(data: PushInstallationInput) {
+  return apiFetch<void>('/api/v1/notifications/installations', {
+    method: 'DELETE',
+    body: JSON.stringify(data),
+  })
+}

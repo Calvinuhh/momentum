@@ -1,9 +1,10 @@
 import type { Context } from "hono";
-import { and, eq, isNull, lte, notInArray, or } from "drizzle-orm";
+import { and, eq, inArray, isNull, lte, notInArray, or } from "drizzle-orm";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { sign } from "hono/jwt";
 import { env } from "../config/env.js";
 import { db } from "../db/index.js";
+import { pushInstallations } from "../db/schema/push-installations.js";
 import { refreshTokens } from "../db/schema/refresh-tokens.js";
 import { createOpaqueToken, hashOpaqueToken } from "./opaque-tokens.js";
 import { isRecentRefreshRevocation, prepareRefreshSession } from "./refresh-tokens.js";
@@ -11,6 +12,8 @@ import { isRecentRefreshRevocation, prepareRefreshSession } from "./refresh-toke
 const ACCESS_TOKEN_TTL_SECONDS = 15 * 60;
 const REFRESH_TOKEN_COOKIE = "refresh_token";
 const REFRESH_TOKEN_PATH = "/api/v1";
+
+type SessionTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 async function setAccessTokenCookie(c: Context, userId: string, sessionExpiresAt: Date) {
   const now = Math.floor(Date.now() / 1000);
@@ -76,8 +79,35 @@ export async function deleteRefreshFamily(token: string) {
       .get();
 
     if (current) {
+      tx.delete(pushInstallations).where(eq(pushInstallations.familyId, current.familyId)).run();
       tx.delete(refreshTokens).where(eq(refreshTokens.familyId, current.familyId)).run();
     }
+  });
+}
+
+export async function withCurrentRefreshFamily(
+  token: string | undefined,
+  userId: string,
+  operation: (tx: SessionTransaction, familyId: string) => void,
+): Promise<boolean> {
+  if (!token) return false;
+  const tokenHash = await hashOpaqueToken(token);
+
+  return db.transaction((tx) => {
+    const current = tx
+      .select()
+      .from(refreshTokens)
+      .where(eq(refreshTokens.tokenHash, tokenHash))
+      .get();
+    if (!current || current.userId !== userId || current.revokedAt) return false;
+    if (current.expiresAt <= new Date()) {
+      tx.delete(pushInstallations).where(eq(pushInstallations.familyId, current.familyId)).run();
+      tx.delete(refreshTokens).where(eq(refreshTokens.familyId, current.familyId)).run();
+      return false;
+    }
+
+    operation(tx, current.familyId);
+    return true;
   });
 }
 
@@ -94,6 +124,7 @@ export async function startSession(c: Context, userId: string) {
         .where(eq(refreshTokens.tokenHash, currentTokenHash))
         .get();
       if (current) {
+        tx.delete(pushInstallations).where(eq(pushInstallations.familyId, current.familyId)).run();
         tx.delete(refreshTokens).where(eq(refreshTokens.familyId, current.familyId)).run();
       }
     }
@@ -102,6 +133,18 @@ export async function startSession(c: Context, userId: string) {
       .selectDistinct({ familyId: refreshTokens.familyId })
       .from(refreshTokens)
       .where(isNull(refreshTokens.revokedAt));
+    const staleFamilies = tx
+      .selectDistinct({ familyId: refreshTokens.familyId })
+      .from(refreshTokens)
+      .where(
+        or(
+          lte(refreshTokens.expiresAt, new Date()),
+          notInArray(refreshTokens.familyId, activeFamilies),
+        ),
+      );
+    tx.delete(pushInstallations)
+      .where(inArray(pushInstallations.familyId, staleFamilies))
+      .run();
     tx.delete(refreshTokens)
       .where(
         or(
@@ -136,10 +179,12 @@ export async function rotateRefreshSession(token: string) {
       .where(eq(refreshTokens.tokenHash, tokenHash))
       .get();
 
-    if (
-      !current ||
-      Math.floor(current.expiresAt.getTime() / 1000) <= Math.floor(now.getTime() / 1000)
-    ) {
+    if (!current) {
+      return { kind: "invalid" as const };
+    }
+    if (Math.floor(current.expiresAt.getTime() / 1000) <= Math.floor(now.getTime() / 1000)) {
+      tx.delete(pushInstallations).where(eq(pushInstallations.familyId, current.familyId)).run();
+      tx.delete(refreshTokens).where(eq(refreshTokens.familyId, current.familyId)).run();
       return { kind: "invalid" as const };
     }
 
@@ -152,6 +197,7 @@ export async function rotateRefreshSession(token: string) {
         .set({ revokedAt: now })
         .where(and(eq(refreshTokens.familyId, current.familyId), isNull(refreshTokens.revokedAt)))
         .run();
+      tx.delete(pushInstallations).where(eq(pushInstallations.familyId, current.familyId)).run();
       return { kind: "reused" as const };
     }
 

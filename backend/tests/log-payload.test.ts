@@ -8,6 +8,7 @@ describe("log payload previews", () => {
         email: "calvin@example.com",
         password: "Secret1!",
         code: "6jRHqd",
+        fid: "c12345678901234567890",
         nested: { accessToken: "token", ownerEmail: "owner@example.com" },
       }),
       "application/json",
@@ -17,6 +18,7 @@ describe("log payload previews", () => {
       email: "c***@example.com",
       password: "[REDACTED]",
       code: "[REDACTED]",
+      fid: "[REDACTED]",
       nested: { accessToken: "[REDACTED]", ownerEmail: "o***@example.com" },
     });
     expect(preview).not.toContain("\n");

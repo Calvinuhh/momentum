@@ -15,4 +15,10 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  worker: {
+    format: 'iife',
+    rolldownOptions: {
+      output: { entryFileNames: 'firebase-messaging-sw.js' },
+    },
+  },
 })

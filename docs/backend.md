@@ -16,7 +16,7 @@ El código fuente, identificadores, comentarios técnicos y respuestas de la API
 
 ## Organización
 
-El backend utiliza una organización modular por dominio y endpoint. Actualmente implementa auth, workspaces e invitaciones mediante `modules/invitations/{create,preview,accept}`.
+El backend utiliza una organización modular por dominio y endpoint. Actualmente implementa auth, workspaces, invitaciones mediante `modules/invitations/{create,preview,accept}` y notificaciones internas con registro de instalaciones push.
 
 `modules/index.ts` monta los módulos principales con `app.route()`. Cada módulo puede montar sus endpoints relacionados y cada endpoint mantiene cerca su router, validación, lógica de negocio y tipos.
 
@@ -28,7 +28,7 @@ Los servicios contienen lógica de negocio independiente de Hono y no importan `
 
 Los handlers HTTP se mantienen pequeños y no se utilizan controladores MVC ni clases propias por defecto. `service.ts` contiene funciones independientes del contexto HTTP. `schema.ts` define los schemas Zod y `types.ts` exporta tipos derivados o tipos de dominio reutilizables.
 
-`app.ts` exporta la aplicación Hono para pruebas mediante `app.request()` con CORS multi-origen, `requestLogger` y `onError` (`ApiError`, `HTTPException` como fallback y `BAD_JSON`). `server.ts` inicia el servicio con `Bun.serve` (`HOST`/`PORT`). `modules/index.ts` monta `auth`, `invitations` y `workspaces`.
+`app.ts` exporta la aplicación Hono para pruebas mediante `app.request()` con CORS multi-origen, `requestLogger` y `onError` (`ApiError`, `HTTPException` como fallback y `BAD_JSON`). `server.ts` inicia el servicio con `Bun.serve` (`HOST`/`PORT`). `modules/index.ts` monta `auth`, `invitations`, `notifications` y `workspaces`.
 
 La validación JSON reutilizable se centraliza en `src/middleware/validation.ts` mediante `validateJson(schema)`. El middleware distingue `JSON_REQUIRED` (415), `EMPTY_JSON_BODY` (400), `BAD_JSON` (400) y `VALIDATION_ERROR` (400); las reglas de cada body permanecen en el `schema.ts` de su endpoint.
 
@@ -36,7 +36,7 @@ Los errores HTTP propios usan la fábrica funcional `src/errors/api-error.ts`: `
 
 ## Observabilidad
 
-La consola muestra siempre timestamp, nivel, método, ruta, status y duración. `SHOW_LOGS=true` habilita además `logs/YYYY-MM-DD.log`, que añade request bodies para `POST`/`PUT`/`PATCH` y response bodies para `GET`/`POST`/`PUT`/`PATCH`/`DELETE` cuando son JSON compacto en una sola línea (`Request body: {...}` / `Response body: {...}` + blank line entre requests). Con `SHOW_LOGS=false` (valor por defecto) no se crean archivos. Passwords, códigos, tokens, cookies, secrets y claves se redactan; los emails se enmascaran. Cada preview se limita a 4 KiB y se omiten bodies no JSON, SSE, JSON malformado o capturas superiores a 64 KiB. La decisión de persistir archivos es independiente de `NODE_ENV`.
+La consola muestra siempre timestamp, nivel, método, ruta, status y duración. `SHOW_LOGS=true` habilita además `logs/YYYY-MM-DD.log`, que añade request bodies para `POST`/`PUT`/`PATCH` y response bodies para `GET`/`POST`/`PUT`/`PATCH`/`DELETE` cuando son JSON compacto en una sola línea (`Request body: {...}` / `Response body: {...}` + blank line entre requests). Con `SHOW_LOGS=false` (valor por defecto) no se crean archivos. Passwords, códigos, tokens, cookies, FIDs, secrets y claves se redactan; los emails se enmascaran. Cada preview se limita a 4 KiB y se omiten bodies no JSON, SSE, JSON malformado o capturas superiores a 64 KiB. La decisión de persistir archivos es independiente de `NODE_ENV`.
 
 La sanitización y el truncado tienen pruebas unitarias con `bun test`.
 
@@ -44,7 +44,7 @@ La sanitización y el truncado tienen pruebas unitarias con `bun test`.
 
 Implementados `POST /api/v1/auth/register`, `POST /api/v1/auth/login`, `POST /api/v1/auth/logout`, `POST /api/v1/auth/refresh`, `GET /api/v1/auth/me` (`requireAuth`) y `POST /api/v1/auth/verify-email`. El registro guarda el hash generado por `Bun.password`, genera un código alfanumérico de seis caracteres con validez de 24 horas, conserva solo su hash y encola el email mediante BullMQ. El worker integrado usa Nodemailer SMTP.
 
-El login exige email verificado y crea una familia independiente por dispositivo. Emite un JWT HS256 `access_token` de 15 minutos y un refresh opaco rotatorio con expiración absoluta de siete días, ambos en cookies `HttpOnly`; SQLite conserva únicamente SHA-256 del refresh. `POST /auth/refresh` rota el token, mantiene la expiración original y responde `204`. Una reutilización fuera de la tolerancia de concurrencia revoca toda la familia. Logout elimina inmediatamente la familia del dispositivo actual y ambas cookies; un login sustitutorio elimina también su familia anterior. Los tokens consumidos durante una rotación normal se conservan mientras la familia siga activa para detectar reutilización. `GET /me` retorna `200 {user}` o `401`. Middleware `requireAuth` acepta cookie `access_token` o `Bearer` y verifica `HS256` con `JWT_SECRET`.
+El login exige email verificado y crea una familia independiente por dispositivo. Emite un JWT HS256 `access_token` de 15 minutos y un refresh opaco rotatorio con expiración absoluta de siete días, ambos en cookies `HttpOnly`; SQLite conserva únicamente SHA-256 del refresh. `POST /auth/refresh` rota el token, mantiene la expiración original y responde `204`. Una reutilización fuera de la tolerancia de concurrencia revoca toda la familia. Logout elimina inmediatamente la familia, sus instalaciones push y ambas cookies; un login sustitutorio elimina también su familia e instalaciones anteriores. Los tokens consumidos durante una rotación normal se conservan mientras la familia siga activa para detectar reutilización. `GET /me` retorna `200 {user}` o `401`. Middleware `requireAuth` acepta cookie `access_token` o `Bearer` y verifica `HS256` con `JWT_SECRET`.
 
 La validación de `register` usa un contrato `VALIDATION_ERROR` con detalles por campo (`field` y `message`), sin exponer directamente la estructura interna de `ZodError`.
 
@@ -63,6 +63,8 @@ El hard delete es un endpoint backend-only y no tiene llamada, control ni flujo 
 ## Notificaciones
 
 `GET /api/v1/notifications?limit=20&cursor=<id>` devuelve las notificaciones recientes del usuario autenticado, ordenadas por fecha descendente, junto con `unreadCount` y `nextCursor`; `limit` acepta valores entre 1 y 50. Las invitaciones incluyen `invitationId` para abrir su revisión autenticada sin exponer el token. `PATCH /api/v1/notifications/:id/read` y `PATCH /api/v1/notifications/read-all` marcan una o todas las notificaciones propias como leídas y son idempotentes.
+
+`PUT /api/v1/notifications/installations` registra o reemplaza el FID asociado a la familia refresh actual y `DELETE /api/v1/notifications/installations` lo elimina idempotentemente. Ambos reciben `{fid,userId}` por JSON, validan la cuenta esperada y requieren access token y refresh cookie activos; el FID no aparece en URLs ni respuestas. Cerrar, reemplazar, expirar o revocar una familia elimina sus instalaciones. La entrega FCM desde el worker todavía no está activada.
 
 ## Datos
 

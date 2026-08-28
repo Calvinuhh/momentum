@@ -19,6 +19,7 @@ const router = createRouter({
     { path: '/invitations/accept', component: () => import('@/views/AcceptInvitationView.vue') },
     { path: '/workspaces', component: () => import('@/views/WorkspacesView.vue'), meta: { requiresAuth: true } },
     { path: '/workspaces/:id', component: () => import('@/views/WorkspaceDetailView.vue'), meta: { requiresAuth: true } },
+    { path: '/settings', component: () => import('@/views/SettingsView.vue'), meta: { requiresAuth: true } },
     { path: '/:pathMatch(.*)*', component: () => import('@/views/NotFoundView.vue') },
   ],
   scrollBehavior: () => ({ top: 0 }),
