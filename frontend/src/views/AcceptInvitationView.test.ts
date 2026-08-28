@@ -25,7 +25,10 @@ afterEach(() => {
   vi.clearAllMocks()
 })
 
-async function mountView(target = `/invitations/accept?invitation=${invitationId}`) {
+async function mountView(
+  target = `/invitations/accept?invitation=${invitationId}`,
+  revalidateGuestRoute = false,
+) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   const router = createRouter({
     history: createMemoryHistory(),
@@ -37,6 +40,17 @@ async function mountView(target = `/invitations/accept?invitation=${invitationId
       { path: '/workspaces/:id', component: { template: '<div>Workspace</div>' } },
     ],
   })
+  if (revalidateGuestRoute) {
+    router.beforeEach(async (to) => {
+      if (to.path !== '/register') return
+      try {
+        await queryClient.query({ queryKey: ['auth', 'me'], queryFn: getMe, retry: false })
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 401) return
+        throw error
+      }
+    })
+  }
   await router.push(target)
   await router.isReady()
   const wrapper = mount(AcceptInvitationView, {
@@ -104,6 +118,24 @@ describe('AcceptInvitationView', () => {
 
     expect(router.currentRoute.value.query.redirect).toBe('/invitations/accept')
     expect(sessionStorage.getItem('momentum:invitation')).toBe(`#token=${invitationToken}`)
+    expect(previewInvitation).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  test('redirects once when the guest route guard rechecks an invitation by ID', async () => {
+    vi.mocked(getMe).mockRejectedValue(
+      new ApiError(401, {
+        error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
+      }),
+    )
+
+    const { wrapper, router } = await mountView(undefined, true)
+    await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/register'))
+
+    expect(router.currentRoute.value.query.redirect).toBe(
+      `/invitations/accept?invitation=${invitationId}`,
+    )
+    expect(getMe).toHaveBeenCalledTimes(2)
     expect(previewInvitation).not.toHaveBeenCalled()
     wrapper.unmount()
   })

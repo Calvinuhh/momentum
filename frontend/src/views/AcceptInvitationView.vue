@@ -15,6 +15,7 @@ const auth = useAuthStore()
 const invitationHashKey = 'momentum:invitation'
 const invitationHash = ref(sessionStorage.getItem(invitationHashKey) ?? '')
 const emailPreviewKey = ref(crypto.randomUUID())
+const isRedirecting = ref(false)
 const token = computed(() => new URLSearchParams(invitationHash.value.slice(1)).get('token') ?? '')
 const invitationId = computed(() =>
   typeof route.query.invitation === 'string' ? route.query.invitation : '',
@@ -87,7 +88,8 @@ const isPreviewUnauthorized = computed(
 watch(
   [isGuest, isPreviewUnauthorized, reference],
   ([guest, unauthorized, invitationReference]) => {
-    if (!(invitationReference && (guest || unauthorized))) return
+    if (isRedirecting.value || !(invitationReference && (guest || unauthorized))) return
+    isRedirecting.value = true
     if (unauthorized) {
       auth.reset()
       queryClient.removeQueries({ queryKey: ['auth', 'me'] })
@@ -117,12 +119,12 @@ const { mutate: accept, isPending: isAcceptPending } = useMutation({
       This invitation link is invalid.
     </p>
 
-    <p v-else-if="isAuthPending || (user && isPreviewPending)" class="mt-6 text-sm text-neutral-400">
-      Checking your invitation...
+    <p v-else-if="isRedirecting || isGuest || isPreviewUnauthorized" class="mt-6 text-sm text-neutral-400">
+      Redirecting to registration...
     </p>
 
-    <p v-else-if="isGuest || isPreviewUnauthorized" class="mt-6 text-sm text-neutral-400">
-      Redirecting to registration...
+    <p v-else-if="isAuthPending || (user && isPreviewPending)" class="mt-6 text-sm text-neutral-400">
+      Checking your invitation...
     </p>
 
     <div v-else-if="isEmailMismatch" class="mt-6">
