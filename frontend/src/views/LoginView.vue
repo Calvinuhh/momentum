@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/vue-query'
 import { loginSchema } from '@/schemas/auth'
 import { login } from '@/api/auth'
 import { useFormErrors } from '@/composables/useFormErrors'
+import { authQueryKey, removeAccountQueries } from '@/lib/queryClient'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
@@ -13,7 +14,10 @@ const qc = useQueryClient()
 const auth = useAuthStore()
 const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
 const registerTarget = redirect ? { path: '/register', query: { redirect } } : '/register'
-const form = reactive({ email: typeof route.query.email === 'string' ? route.query.email : '', password: '' })
+const form = reactive({
+  email: typeof route.query.email === 'string' ? route.query.email : '',
+  password: '',
+})
 const showPassword = ref(false)
 const verifiedMessage = route.query.verified === '1'
 const { errors, serverError, clear, applyZod, applyApi } = useFormErrors()
@@ -21,10 +25,10 @@ const { errors, serverError, clear, applyZod, applyApi } = useFormErrors()
 const { mutate, isPending } = useMutation({
   mutationFn: login,
   onSuccess: async (data) => {
+    removeAccountQueries(qc)
+    qc.setQueryData(authQueryKey, data.user)
     auth.setUser(data.user)
-    await qc.invalidateQueries({ queryKey: ['auth', 'me'] })
-    await qc.invalidateQueries({ queryKey: ['workspaces'] })
-    router.push(redirect || '/workspaces')
+    await router.push(redirect || '/workspaces')
   },
   onError: applyApi,
 })

@@ -39,12 +39,14 @@ describe("notification persistence schemas", () => {
     expect(config.checks).toHaveLength(1);
   });
 
-  test("uses the FID as push installation primary key", () => {
+  test("uses the endpoint as push installation primary key", () => {
     const config = getTableConfig(pushInstallations);
 
     expect(config.name).toBe("push_installations");
     expect(config.columns.map((column) => column.name)).toEqual([
-      "fid",
+      "endpoint",
+      "p256dh",
+      "auth",
       "user_id",
       "family_id",
       "created_at",

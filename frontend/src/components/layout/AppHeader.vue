@@ -1,26 +1,20 @@
 <script setup lang="ts">
 import { watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
-import { getMe, logout } from '@/api/auth'
+import { useMutation, useQueryClient } from '@tanstack/vue-query'
+import { logout } from '@/api/auth'
+import { setSessionHint } from '@/api/client'
 import NotificationBell from '@/components/notifications/NotificationBell.vue'
+import { authQueryKey, removeAccountQueries } from '@/lib/queryClient'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const qc = useQueryClient()
 const auth = useAuthStore()
 
-const { data: user, isPending: isAuthPending } = useQuery({
-  queryKey: ['auth', 'me'],
-  queryFn: getMe,
-  staleTime: 5 * 60 * 1000,
-  retry: false,
-})
-
 watch(
-  user,
+  () => auth.user,
   (value) => {
-    auth.setUser(value ?? null)
     if (value) {
       void import('@/lib/browserNotifications')
         .then(({ startBrowserNotifications }) => startBrowserNotifications(value.id))
@@ -44,10 +38,10 @@ const { mutate: doLogout, isPending: isLogoutPending } = useMutation({
   },
   onSettled: () => {
     if (auth.user) sessionStorage.removeItem(`momentum:notifications-summary:${auth.user.id}`)
+    setSessionHint(false, false)
+    qc.setQueryData(authQueryKey, null)
+    removeAccountQueries(qc)
     auth.reset()
-    qc.removeQueries({ queryKey: ['auth', 'me'] })
-    qc.removeQueries({ queryKey: ['notifications'] })
-    qc.removeQueries({ queryKey: ['workspaces'] })
     router.push('/')
   },
 })
@@ -63,7 +57,7 @@ const { mutate: doLogout, isPending: isLogoutPending } = useMutation({
         >
         <span class="hidden sm:inline">Momentum</span>
       </RouterLink>
-      <nav v-if="!isAuthPending" class="flex items-center gap-1 text-sm sm:gap-3">
+      <nav v-if="auth.isReady" class="flex items-center gap-1 text-sm sm:gap-3">
         <template v-if="auth.isAuthed">
           <NotificationBell v-if="auth.user" :user-id="auth.user.id" />
           <RouterLink to="/workspaces" class="rounded px-3 py-1.5 hover:bg-neutral-900"

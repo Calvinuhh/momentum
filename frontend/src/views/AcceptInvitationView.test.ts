@@ -3,14 +3,10 @@ import { mount } from '@vue/test-utils'
 import { createPinia } from 'pinia'
 import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query'
 import { createMemoryHistory, createRouter } from 'vue-router'
-import { getMe } from '@/api/auth'
 import { acceptInvitation, previewInvitation } from '@/api/invitations'
 import { ApiError } from '@/api/client'
+import { useAuthStore, type AuthUser } from '@/stores/auth'
 import AcceptInvitationView from './AcceptInvitationView.vue'
-
-vi.mock('@/api/auth', () => ({
-  getMe: vi.fn<typeof getMe>(),
-}))
 
 vi.mock('@/api/invitations', () => ({
   acceptInvitation: vi.fn<typeof acceptInvitation>(),
@@ -27,9 +23,11 @@ afterEach(() => {
 
 async function mountView(
   target = `/invitations/accept?invitation=${invitationId}`,
-  revalidateGuestRoute = false,
+  user: AuthUser | null = null,
 ) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const pinia = createPinia()
+  useAuthStore(pinia).setUser(user)
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [
@@ -40,28 +38,16 @@ async function mountView(
       { path: '/workspaces/:id', component: { template: '<div>Workspace</div>' } },
     ],
   })
-  if (revalidateGuestRoute) {
-    router.beforeEach(async (to) => {
-      if (to.path !== '/register') return
-      try {
-        await queryClient.query({ queryKey: ['auth', 'me'], queryFn: getMe, retry: false })
-      } catch (error) {
-        if (error instanceof ApiError && error.status === 401) return
-        throw error
-      }
-    })
-  }
   await router.push(target)
   await router.isReady()
   const wrapper = mount(AcceptInvitationView, {
-    global: { plugins: [createPinia(), [VueQueryPlugin, { queryClient }], router] },
+    global: { plugins: [pinia, [VueQueryPlugin, { queryClient }], router] },
   })
   return { wrapper, router }
 }
 
 describe('AcceptInvitationView', () => {
   test('blocks an invitation that belongs to another account', async () => {
-    vi.mocked(getMe).mockResolvedValue({ id: 'owner-1', email: 'owner@example.com' })
     vi.mocked(previewInvitation).mockRejectedValue(
       new ApiError(403, {
         error: {
@@ -71,8 +57,10 @@ describe('AcceptInvitationView', () => {
       }),
     )
 
-    const { wrapper } = await mountView()
-    await vi.waitFor(() => expect(wrapper.text()).toContain('This invitation is unavailable for this account'))
+    const { wrapper } = await mountView(undefined, { id: 'owner-1', email: 'owner@example.com' })
+    await vi.waitFor(() =>
+      expect(wrapper.text()).toContain('This invitation is unavailable for this account'),
+    )
 
     expect(wrapper.text()).not.toContain('owner@example.com')
     expect(wrapper.text()).not.toContain('Sign in with another account')
@@ -83,7 +71,6 @@ describe('AcceptInvitationView', () => {
   })
 
   test('shows details and accepts by invitation ID for the recipient', async () => {
-    vi.mocked(getMe).mockResolvedValue({ id: 'member-1', email: 'member@example.com' })
     vi.mocked(previewInvitation).mockResolvedValue({
       invitation: {
         workspace: { id: 'workspace-1', name: 'Development Tasks' },
@@ -97,7 +84,10 @@ describe('AcceptInvitationView', () => {
       workspace: { id: 'workspace-1', name: 'Development Tasks' },
     })
 
-    const { wrapper, router } = await mountView()
+    const { wrapper, router } = await mountView(undefined, {
+      id: 'member-1',
+      email: 'member@example.com',
+    })
     await vi.waitFor(() => expect(wrapper.text()).toContain('owner@example.com'))
     await wrapper.get('button').trigger('click')
     await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/workspaces/workspace-1'))
@@ -107,10 +97,6 @@ describe('AcceptInvitationView', () => {
   })
 
   test('redirects an unauthenticated invitation recipient to registration without previewing details', async () => {
-    const unauthorized = new ApiError(401, {
-      error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
-    })
-    vi.mocked(getMe).mockRejectedValue(unauthorized)
     sessionStorage.setItem('momentum:invitation', `#token=${invitationToken}`)
 
     const { wrapper, router } = await mountView('/invitations/accept')
@@ -122,20 +108,13 @@ describe('AcceptInvitationView', () => {
     wrapper.unmount()
   })
 
-  test('redirects once when the guest route guard rechecks an invitation by ID', async () => {
-    vi.mocked(getMe).mockRejectedValue(
-      new ApiError(401, {
-        error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
-      }),
-    )
-
-    const { wrapper, router } = await mountView(undefined, true)
+  test('redirects an anonymous invitation by ID without previewing details', async () => {
+    const { wrapper, router } = await mountView()
     await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/register'))
 
     expect(router.currentRoute.value.query.redirect).toBe(
       `/invitations/accept?invitation=${invitationId}`,
     )
-    expect(getMe).toHaveBeenCalledTimes(2)
     expect(previewInvitation).not.toHaveBeenCalled()
     wrapper.unmount()
   })

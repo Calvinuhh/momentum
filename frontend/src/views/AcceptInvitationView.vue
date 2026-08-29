@@ -3,9 +3,9 @@ import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { acceptInvitation, previewInvitation, type InvitationReference } from '@/api/invitations'
-import { getMe } from '@/api/auth'
 import { ApiError } from '@/api/client'
 import { useFormErrors } from '@/composables/useFormErrors'
+import { authQueryKey, removeAccountQueries } from '@/lib/queryClient'
 import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
@@ -26,13 +26,9 @@ const reference = computed<InvitationReference | undefined>(() => {
   return undefined
 })
 const { serverError, clear, applyApi } = useFormErrors()
-
-const { data: user, isPending: isAuthPending, error: authError } = useQuery({
-  queryKey: ['auth', 'me'],
-  queryFn: getMe,
-  retry: false,
-})
-const isGuest = computed(() => authError.value instanceof ApiError && authError.value.status === 401)
+const user = computed(() => auth.user)
+const isAuthPending = computed(() => !auth.isReady)
+const isGuest = computed(() => auth.status === 'anonymous')
 const registerTarget = computed(() => ({
   path: '/register',
   query: { redirect: invitationId.value ? route.fullPath : '/invitations/accept' },
@@ -46,7 +42,11 @@ watch(
     emailPreviewKey.value = crypto.randomUUID()
     sessionStorage.setItem(invitationHashKey, value)
     clear()
-    window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search)
+    window.history.replaceState(
+      window.history.state,
+      '',
+      window.location.pathname + window.location.search,
+    )
   },
   { immediate: true },
 )
@@ -79,7 +79,9 @@ const {
 
 const invitation = computed(() => previewData.value?.invitation)
 const isEmailMismatch = computed(
-  () => previewError.value instanceof ApiError && previewError.value.code === 'INVITATION_EMAIL_MISMATCH',
+  () =>
+    previewError.value instanceof ApiError &&
+    previewError.value.code === 'INVITATION_EMAIL_MISMATCH',
 )
 const isPreviewUnauthorized = computed(
   () => previewError.value instanceof ApiError && previewError.value.status === 401,
@@ -92,7 +94,8 @@ watch(
     isRedirecting.value = true
     if (unauthorized) {
       auth.reset()
-      queryClient.removeQueries({ queryKey: ['auth', 'me'] })
+      queryClient.setQueryData(authQueryKey, null)
+      removeAccountQueries(queryClient)
     }
     void router.replace(registerTarget.value)
   },
@@ -109,6 +112,11 @@ const { mutate: accept, isPending: isAcceptPending } = useMutation({
   },
   onError: applyApi,
 })
+
+function onAccept() {
+  clear()
+  accept()
+}
 </script>
 
 <template>
@@ -119,11 +127,17 @@ const { mutate: accept, isPending: isAcceptPending } = useMutation({
       This invitation link is invalid.
     </p>
 
-    <p v-else-if="isRedirecting || isGuest || isPreviewUnauthorized" class="mt-6 text-sm text-neutral-400">
+    <p
+      v-else-if="isRedirecting || isGuest || isPreviewUnauthorized"
+      class="mt-6 text-sm text-neutral-400"
+    >
       Redirecting to registration...
     </p>
 
-    <p v-else-if="isAuthPending || (user && isPreviewPending)" class="mt-6 text-sm text-neutral-400">
+    <p
+      v-else-if="isAuthPending || (user && isPreviewPending)"
+      class="mt-6 text-sm text-neutral-400"
+    >
       Checking your invitation...
     </p>
 
@@ -132,7 +146,10 @@ const { mutate: accept, isPending: isAcceptPending } = useMutation({
         <h2 class="font-semibold text-red-200">This invitation is unavailable for this account</h2>
         <p class="mt-2 text-sm text-red-300">Return to your workspaces to continue.</p>
       </div>
-      <RouterLink to="/workspaces" class="mt-3 block text-center text-sm text-neutral-400 hover:text-white">
+      <RouterLink
+        to="/workspaces"
+        class="mt-3 block text-center text-sm text-neutral-400 hover:text-white"
+      >
         Back to workspaces
       </RouterLink>
     </div>
@@ -141,7 +158,11 @@ const { mutate: accept, isPending: isAcceptPending } = useMutation({
       v-else-if="previewError || (!user && !isGuest)"
       class="mt-4 rounded bg-red-950/50 px-3 py-2 text-sm text-red-300"
     >
-      {{ previewError instanceof ApiError ? previewError.message : 'Could not check your invitation. Please try again.' }}
+      {{
+        previewError instanceof ApiError
+          ? previewError.message
+          : 'Could not check your invitation. Please try again.'
+      }}
     </p>
 
     <template v-else-if="invitation">
@@ -166,7 +187,7 @@ const { mutate: accept, isPending: isAcceptPending } = useMutation({
           type="button"
           :disabled="isAcceptPending"
           class="mt-4 w-full rounded bg-brand-600 py-2.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
-          @click="clear(); accept()"
+          @click="onAccept"
         >
           {{ isAcceptPending ? 'Accepting...' : 'Accept invitation' }}
         </button>

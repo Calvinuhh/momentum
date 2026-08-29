@@ -18,7 +18,7 @@ export default defineConfig({
   worker: {
     format: 'iife',
     rolldownOptions: {
-      output: { entryFileNames: 'firebase-messaging-sw.js' },
+      output: { entryFileNames: 'sw.js' },
     },
   },
 })

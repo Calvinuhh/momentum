@@ -1,43 +1,23 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
-  registered: undefined as ((fid: string) => void) | undefined,
-  unregistered: undefined as ((fid: string) => void) | undefined,
-  isSupported: vi.fn<() => Promise<boolean>>(),
-  getMessaging: vi.fn<() => object>(() => ({})),
-  onRegistered: vi.fn<(_messaging: unknown, callback: (fid: string) => void) => () => void>((_messaging, callback) => {
-    mocks.registered = callback
-    return vi.fn<() => void>()
-  }),
-  onUnregistered: vi.fn<(_messaging: unknown, callback: (fid: string) => void) => () => void>((_messaging, callback) => {
-    mocks.unregistered = callback
-    return vi.fn<() => void>()
-  }),
-  register: vi.fn<(...args: unknown[]) => Promise<void>>(),
-  unregister: vi.fn<(...args: unknown[]) => Promise<void>>(),
-  registerApi: vi.fn<(data: { fid: string; userId: string }) => Promise<void>>(),
-  deleteApi: vi.fn<(data: { fid: string; userId: string }) => Promise<void>>(),
+  registerApi:
+    vi.fn<
+      (data: { endpoint: string; p256dh: string; auth: string; userId: string }) => Promise<void>
+    >(),
+  deleteApi:
+    vi.fn<
+      (data: { endpoint: string; userId: string; p256dh?: string; auth?: string }) => Promise<void>
+    >(),
   requestPermission: vi.fn<() => Promise<NotificationPermission>>(),
-  registerServiceWorker: vi.fn<() => Promise<object>>(),
+  subscribe: vi.fn<() => Promise<PushSubscription>>(),
+  getSubscription: vi.fn<() => Promise<PushSubscription | null>>(),
+  unsubscribe: vi.fn<() => Promise<boolean>>(),
+  registerServiceWorker: vi.fn<() => Promise<ServiceWorkerRegistration>>(),
 }))
 
-vi.mock('firebase/messaging', () => ({
-  getMessaging: mocks.getMessaging,
-  isSupported: mocks.isSupported,
-  onRegistered: mocks.onRegistered,
-  onUnregistered: mocks.onUnregistered,
-  register: mocks.register,
-  unregister: mocks.unregister,
-}))
-
-vi.mock('@/firebase-messaging-sw.ts?worker&url', () => ({
-  default: '/firebase-messaging-sw.js',
-}))
-
-vi.mock('@/lib/firebase', () => ({
-  firebaseConfigured: true,
-  firebaseVapidKey: 'public-vapid-key',
-  getFirebaseApp: () => ({}),
+vi.mock('@/sw.ts?worker&url', () => ({
+  default: '/sw.js',
 }))
 
 vi.mock('@/api/notifications', () => ({
@@ -45,28 +25,58 @@ vi.mock('@/api/notifications', () => ({
   deletePushInstallation: mocks.deleteApi,
 }))
 
+function createSubscription(endpoint = 'https://example.com/push/abc'): PushSubscription {
+  return {
+    endpoint,
+    expirationTime: null,
+    options: { applicationServerKey: null, userVisibleOnly: true },
+    getKey: (name: string) => {
+      if (name === 'p256dh') return new Uint8Array(65).buffer
+      if (name === 'auth') return new Uint8Array(16).buffer
+      return null
+    },
+    toJSON: () => ({
+      endpoint,
+      expirationTime: null,
+      keys: { p256dh: 'a'.repeat(87), auth: 'a'.repeat(22) },
+    }),
+    unsubscribe: mocks.unsubscribe,
+  } as unknown as PushSubscription
+}
+
 beforeEach(() => {
   vi.resetModules()
   vi.clearAllMocks()
   localStorage.clear()
-  mocks.registered = undefined
-  mocks.unregistered = undefined
-  mocks.isSupported.mockResolvedValue(true)
   mocks.registerApi.mockResolvedValue(undefined)
   mocks.deleteApi.mockResolvedValue(undefined)
   mocks.requestPermission.mockResolvedValue('granted')
-  mocks.registerServiceWorker.mockResolvedValue({})
-  mocks.register.mockImplementation(async () => mocks.registered?.(`c${'a'.repeat(21)}`))
-  mocks.unregister.mockImplementation(async () => mocks.unregistered?.(`c${'a'.repeat(21)}`))
-  vi.stubGlobal('navigator', { serviceWorker: { register: mocks.registerServiceWorker } })
+  mocks.getSubscription.mockResolvedValue(null)
+  mocks.subscribe.mockResolvedValue(createSubscription())
+  mocks.unsubscribe.mockResolvedValue(true)
+  mocks.registerServiceWorker.mockResolvedValue({
+    pushManager: { getSubscription: mocks.getSubscription, subscribe: mocks.subscribe },
+  } as unknown as ServiceWorkerRegistration)
+  vi.stubGlobal('navigator', {
+    serviceWorker: {
+      register: mocks.registerServiceWorker,
+      getRegistrations: vi.fn<() => Promise<ServiceWorkerRegistration[]>>().mockResolvedValue([]),
+      ready: Promise.resolve({} as ServiceWorkerRegistration),
+    } as unknown as ServiceWorkerContainer,
+  })
   vi.stubGlobal('Notification', {
     permission: 'granted',
     requestPermission: mocks.requestPermission,
-  })
+  } as unknown as typeof Notification)
+  vi.stubGlobal('PushManager', class PushManager {} as unknown as typeof PushManager)
+  Object.defineProperty(window, 'isSecureContext', { value: true, configurable: true })
+  vi.stubEnv('VITE_VAPID_PUBLIC_KEY', 'a'.repeat(87))
+  ;(import.meta.env as Record<string, string>).VITE_VAPID_PUBLIC_KEY = 'a'.repeat(87)
 })
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  vi.unstubAllEnvs()
 })
 
 describe('browser notifications', () => {
@@ -78,9 +88,11 @@ describe('browser notifications', () => {
     await startBrowserNotifications(userId)
 
     expect(mocks.requestPermission).not.toHaveBeenCalled()
-    expect(mocks.register).toHaveBeenCalledOnce()
+    expect(mocks.subscribe).toHaveBeenCalledOnce()
     expect(mocks.registerApi).toHaveBeenCalledWith({
-      fid: `c${'a'.repeat(21)}`,
+      endpoint: 'https://example.com/push/abc',
+      p256dh: 'a'.repeat(87),
+      auth: 'a'.repeat(22),
       userId,
     })
   })
@@ -90,9 +102,8 @@ describe('browser notifications', () => {
 
     await startBrowserNotifications('a'.repeat(24))
 
-    expect(mocks.isSupported).not.toHaveBeenCalled()
     expect(mocks.requestPermission).not.toHaveBeenCalled()
-    expect(mocks.register).not.toHaveBeenCalled()
+    expect(mocks.subscribe).not.toHaveBeenCalled()
   })
 
   test('requests permission only when explicitly enabled', async () => {
@@ -100,7 +111,7 @@ describe('browser notifications', () => {
     vi.stubGlobal('Notification', {
       permission: 'default',
       requestPermission: mocks.requestPermission,
-    })
+    } as unknown as typeof Notification)
     const { enableBrowserNotifications } = await import('../browserNotifications')
 
     await expect(enableBrowserNotifications(userId)).resolves.toBe('active')
@@ -112,16 +123,19 @@ describe('browser notifications', () => {
 
   test('removes the association and preference when disabled', async () => {
     const userId = 'a'.repeat(24)
-    const { disableBrowserNotifications, enableBrowserNotifications } = await import('../browserNotifications')
+    const sub = createSubscription()
+    mocks.getSubscription.mockResolvedValue(sub)
+    const { disableBrowserNotifications, enableBrowserNotifications } =
+      await import('../browserNotifications')
     await enableBrowserNotifications(userId)
     mocks.deleteApi.mockClear()
 
     await expect(disableBrowserNotifications(userId)).resolves.toBe('inactive')
 
     expect(localStorage.getItem(`momentum:browserNotifications:${userId}`)).toBeNull()
-    expect(mocks.unregister).toHaveBeenCalledOnce()
+    expect(mocks.unsubscribe).toHaveBeenCalledOnce()
     expect(mocks.deleteApi).toHaveBeenCalledWith({
-      fid: `c${'a'.repeat(21)}`,
+      endpoint: 'https://example.com/push/abc',
       userId,
     })
   })

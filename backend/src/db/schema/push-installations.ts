@@ -4,7 +4,9 @@ import { users } from "./users.js";
 export const pushInstallations = sqliteTable(
   "push_installations",
   {
-    fid: text("fid").primaryKey(),
+    endpoint: text("endpoint").primaryKey(),
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
     userId: text("user_id")
       .notNull()
       .references(() => users.id),

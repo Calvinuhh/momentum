@@ -11,6 +11,10 @@ function isSensitiveKey(key: string): boolean {
   return (
     normalized === "code" ||
     normalized === "fid" ||
+    normalized === "endpoint" ||
+    normalized === "p256dh" ||
+    normalized === "auth" ||
+    normalized === "keys" ||
     /(password|passwd|token|secret|authorization|cookie|apikey|privatekey|credential|cvv|cardnumber)/.test(
       normalized,
     )

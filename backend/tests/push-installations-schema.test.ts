@@ -2,22 +2,28 @@ import { describe, expect, test } from "bun:test";
 import { pushInstallationSchema } from "../src/modules/notifications/push-installation/schema.js";
 
 describe("push installation schema", () => {
-  test("accepts current FIDs and rejects malformed or ambiguous input", () => {
+  test("accepts VAPID subscriptions and rejects malformed or ambiguous input", () => {
     expect(
       pushInstallationSchema.safeParse({
-        fid: `c${"a".repeat(21)}`,
+        endpoint: "https://example.com/push/abc",
+        p256dh: "a".repeat(87),
+        auth: "a".repeat(22),
         userId: "a".repeat(24),
       }).success,
     ).toBe(true);
     expect(
       pushInstallationSchema.safeParse({
-        fid: `c${"a".repeat(21)} `,
+        endpoint: "http://example.com/push/abc",
+        p256dh: "a".repeat(87),
+        auth: "a".repeat(22),
         userId: "a".repeat(24),
       }).success,
     ).toBe(false);
     expect(
       pushInstallationSchema.safeParse({
-        fid: `c${"a".repeat(21)}`,
+        endpoint: "https://example.com/push/abc",
+        p256dh: "a".repeat(87),
+        auth: "a".repeat(22),
         userId: "a".repeat(24),
         unexpected: true,
       }).success,

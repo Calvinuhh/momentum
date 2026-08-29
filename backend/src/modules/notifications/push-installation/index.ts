@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { createApiError } from "../../../errors/api-error.js";
 import { validateJson } from "../../../middleware/validation.js";
 import { getRefreshTokenCookie } from "../../../utils/session.js";
-import { pushInstallationSchema } from "./schema.js";
+import { deletePushInstallationSchema, pushInstallationSchema } from "./schema.js";
 import { deletePushInstallation, registerPushInstallation } from "./service.js";
 
 const pushInstallationRouter = new Hono<{ Variables: { userId: string } }>();
@@ -21,7 +21,7 @@ pushInstallationRouter.put("/", validateJson(pushInstallationSchema), async (c) 
   return c.body(null, 204);
 });
 
-pushInstallationRouter.delete("/", validateJson(pushInstallationSchema), async (c) => {
+pushInstallationRouter.delete("/", validateJson(deletePushInstallationSchema), async (c) => {
   const deleted = await deletePushInstallation(
     c.get("userId"),
     getRefreshTokenCookie(c),

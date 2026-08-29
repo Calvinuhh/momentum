@@ -1,16 +1,7 @@
 <script setup lang="ts">
-import { useQuery } from '@tanstack/vue-query'
-import { getMe } from '@/api/auth'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
-
-const { isPending: isAuthPending } = useQuery({
-  queryKey: ['auth', 'me'],
-  queryFn: getMe,
-  staleTime: 5 * 60 * 1000,
-  retry: false,
-})
 </script>
 
 <template>
@@ -25,7 +16,7 @@ const { isPending: isAuthPending } = useQuery({
         <p class="mt-4 max-w-xl text-neutral-400">
           Create workspaces, set goals, assign tasks and keep your team aligned — without bloat.
         </p>
-        <div v-if="!isAuthPending" class="mt-8 flex gap-3">
+        <div v-if="auth.isReady" class="mt-8 flex gap-3">
           <template v-if="auth.isAuthed">
             <RouterLink
               to="/workspaces"

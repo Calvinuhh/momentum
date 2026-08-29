@@ -9,6 +9,9 @@ describe("log payload previews", () => {
         password: "Secret1!",
         code: "6jRHqd",
         fid: "c12345678901234567890",
+        endpoint: "https://example.com/push/abc",
+        p256dh: "a".repeat(87),
+        auth: "a".repeat(22),
         nested: { accessToken: "token", ownerEmail: "owner@example.com" },
       }),
       "application/json",
@@ -19,6 +22,9 @@ describe("log payload previews", () => {
       password: "[REDACTED]",
       code: "[REDACTED]",
       fid: "[REDACTED]",
+      endpoint: "[REDACTED]",
+      p256dh: "[REDACTED]",
+      auth: "[REDACTED]",
       nested: { accessToken: "[REDACTED]", ownerEmail: "o***@example.com" },
     });
     expect(preview).not.toContain("\n");

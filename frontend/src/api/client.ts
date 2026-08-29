@@ -19,11 +19,28 @@ export class ApiError extends Error {
   }
 }
 
+type ApiFetchOptions = { refresh?: boolean }
+
 const baseUrl = (import.meta.env.VITE_BACKEND_URL ?? 'http://localhost:3000').replace(/\/+$/, '')
 const refreshPath = '/api/v1/auth/refresh'
-const sessionGenerationKey = 'momentum:sessionGeneration'
+export const SESSION_GENERATION_KEY = 'momentum:sessionGeneration'
+export const SESSION_CLEARED_EVENT = 'momentum:session-cleared'
 const refreshGenerationKey = 'momentum:refreshGeneration'
+export const SESSION_HINT_KEY = 'momentum:sessionHint'
 const sessionTransitionPaths = new Set(['/api/v1/auth/login', '/api/v1/auth/logout'])
+
+export function hasSessionHint() {
+  return localStorage.getItem(SESSION_HINT_KEY) === 'true'
+}
+
+export function setSessionHint(active: boolean, notify = true) {
+  if (active) localStorage.setItem(SESSION_HINT_KEY, 'true')
+  else {
+    const hadSession = hasSessionHint()
+    localStorage.removeItem(SESSION_HINT_KEY)
+    if (hadSession && notify) window.dispatchEvent(new Event(SESSION_CLEARED_EVENT))
+  }
+}
 
 function request(path: string, init: RequestInit): Promise<Response> {
   const headers = new Headers(init.headers)
@@ -43,12 +60,12 @@ async function refreshSession(): Promise<boolean> {
   return false
 }
 
-function getSessionGeneration(): string {
-  return localStorage.getItem(sessionGenerationKey) ?? ''
+export function getSessionGeneration(): string {
+  return localStorage.getItem(SESSION_GENERATION_KEY) ?? ''
 }
 
 function bumpSessionGeneration() {
-  localStorage.setItem(sessionGenerationKey, crypto.randomUUID())
+  localStorage.setItem(SESSION_GENERATION_KEY, crypto.randomUUID())
 }
 
 function getRefreshGeneration(): string {
@@ -60,10 +77,24 @@ function bumpRefreshGeneration() {
 }
 
 function withSessionLock<T>(callback: () => Promise<T>): Promise<T> {
-  return navigator.locks.request('momentum-session', callback)
+  return navigator.locks.request('momentum-session', callback as never) as Promise<T>
 }
 
-export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
+function completeSessionTransition(path: string, response: Response) {
+  if (path === '/api/v1/auth/logout') {
+    setSessionHint(false, false)
+    bumpSessionGeneration()
+  } else if (response.ok) {
+    setSessionHint(true)
+    bumpSessionGeneration()
+  }
+}
+
+export async function apiFetch<T>(
+  path: string,
+  init: RequestInit = {},
+  options: ApiFetchOptions = {},
+): Promise<T> {
   const generation = getSessionGeneration()
   const refreshGeneration = getRefreshGeneration()
   let res: Response
@@ -71,18 +102,17 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
   if (sessionTransitionPaths.has(path) && navigator.locks) {
     res = await withSessionLock(async () => {
       const response = await request(path, init)
-      if (path === '/api/v1/auth/logout' || response.ok) bumpSessionGeneration()
+      completeSessionTransition(path, response)
       return response
     })
   } else {
     res = await request(path, init)
-    if (sessionTransitionPaths.has(path) && (path === '/api/v1/auth/logout' || res.ok)) {
-      bumpSessionGeneration()
-    }
+    if (sessionTransitionPaths.has(path)) completeSessionTransition(path, res)
   }
 
   if (
     res.status === 401 &&
+    options.refresh !== false &&
     navigator.locks &&
     path !== '/api/v1/auth/login' &&
     path !== refreshPath
@@ -91,7 +121,12 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
       if (getSessionGeneration() !== generation) return res
       if (getRefreshGeneration() !== refreshGeneration) return request(path, init)
       const refreshed = await refreshSession()
-      if (!refreshed || getSessionGeneration() !== generation) return res
+      if (!refreshed) {
+        setSessionHint(false)
+        return res
+      }
+      if (getSessionGeneration() !== generation) return res
+      setSessionHint(true)
       bumpRefreshGeneration()
       return request(path, init)
     })
@@ -109,4 +144,7 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
 }
 
 export const fieldErrors = (details: { field: string; message: string }[] = []) =>
-  Object.fromEntries(details.filter((d) => d.field).map((d) => [d.field, d.message])) as Record<string, string>
+  Object.fromEntries(details.filter((d) => d.field).map((d) => [d.field, d.message])) as Record<
+    string,
+    string
+  >

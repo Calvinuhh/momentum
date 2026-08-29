@@ -30,7 +30,19 @@ export function markAllNotificationsRead() {
   return apiFetch<void>('/api/v1/notifications/read-all', { method: 'PATCH' })
 }
 
-export type PushInstallationInput = { fid: string; userId: string }
+export type PushInstallationInput = {
+  endpoint: string
+  p256dh: string
+  auth: string
+  userId: string
+}
+
+export type DeletePushInstallationInput = {
+  endpoint: string
+  userId: string
+  p256dh?: string
+  auth?: string
+}
 
 export function registerPushInstallation(data: PushInstallationInput) {
   return apiFetch<void>('/api/v1/notifications/installations', {
@@ -39,7 +51,7 @@ export function registerPushInstallation(data: PushInstallationInput) {
   })
 }
 
-export function deletePushInstallation(data: PushInstallationInput) {
+export function deletePushInstallation(data: DeletePushInstallationInput) {
   return apiFetch<void>('/api/v1/notifications/installations', {
     method: 'DELETE',
     body: JSON.stringify(data),
